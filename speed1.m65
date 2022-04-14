@@ -384,9 +384,9 @@
 3840     TXA 
 3850     ASL A
 3860     TAX 
-3870     LDA # >MAIN-1
+3870     LDA # >(MAIN-1)
 3880     PHA 
-3890     LDA # <MAIN-1
+3890     LDA # <(MAIN-1)
 3900     PHA 
 3910     LDA VECT+1,X
 3920     PHA 
