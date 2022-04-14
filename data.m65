@@ -125,4 +125,4 @@
 1370     .OPT OBJ
 1380     *=  $02E0
 1390     .WORD BEGIN
-1400     .END 
+1400     .END
