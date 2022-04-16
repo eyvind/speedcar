@@ -1,64 +1,64 @@
-0900 ;*******************
-0901 ;*                 *
-0902 ;* SPEEDSCRIPT:    *
-0903 ;*                 *
-0904 ;*       D:SPEED.0 *
-0905 ;*                 *
-0906 ;*******************
-1000     *=  $1F00
-1010 FROML = $80
-1020 FROMH = $81
-1030 DESTL = $82
-1040 DESTH = $83
-1050 LLEN =  $84
-1060 HLEN =  $85
-1070 CURR =  $86
-1080 SCR =   $88
-1090 TEX =   $8A
-1100 TEMP =  $8C
-1110 INDIR = $8E
-1120 UNDERCURS = $90
-1130 WINDCOLR = $91
-1140 RETCHAR = 94
-1150 SPACE = 0
-1160 RED =   $32
-1170 BLUE =  $74
-1180 ICCOM = $0342
-1190 ICBADR = $0344
-1200 ICBLEN = $0348
-1210 ICAUX1 = $034A
-1220 ICAUX2 = $034B
-1230 ICSTAT = $0343
-1240 SHFLOK = $02BE
-1250 CIO =   $E456
-1260 BEGIN LDA 710
-1270     STA 709
-1280     JSR INIT
-1290     LDA #$CB
-1300     CMP FIRSTRUN
-1310     STA FIRSTRUN
-1320     BEQ SKIPERAS
-1330     JSR ERASE
-1340     JSR KILLBUFF
-1350     LDA $0C
-1360     STA JDOS+1
-1370     LDA $0D
-1380     STA JDOS+2
-1390     LDA # <JDOS
-1400     STA $0C
-1410     LDA # >JDOS
-1420     STA $0D
-1430     LDA #0
-1440     STA 580
-1450     LDA #1
-1460     STA $09
-1470 SKIPERAS JSR INIT2
-1480     JMP MAIN
-1490     *=  $2000
-1500     .INCLUDE chset.m65
-1510     .INCLUDE speed1.m65
-1520     .INCLUDE support.m65
-1525     .INCLUDE dospak.m65
-1530     .INCLUDE speed2.m65
-1540     .INCLUDE data.m65
-1550     .END 
+;*******************
+;*                 *
+;* SPEEDSCRIPT:    *
+;*                 *
+;*       D:SPEED.0 *
+;*                 *
+;*******************
+	*=  $1F00
+FROML = $80
+FROMH = $81
+DESTL = $82
+DESTH = $83
+LLEN =  $84
+HLEN =  $85
+CURR =  $86
+SCR =   $88
+TEX =   $8A
+TEMP =  $8C
+INDIR = $8E
+UNDERCURS = $90
+WINDCOLR = $91
+RETCHAR = 94
+SPACE = 0
+RED =   $32
+BLUE =  $74
+ICCOM = $0342
+ICBADR = $0344
+ICBLEN = $0348
+ICAUX1 = $034A
+ICAUX2 = $034B
+ICSTAT = $0343
+SHFLOK = $02BE
+CIO =   $E456
+BEGIN LDA 710
+	STA 709
+	JSR INIT
+	LDA #$CB
+	CMP FIRSTRUN
+	STA FIRSTRUN
+	BEQ SKIPERAS
+	JSR ERASE
+	JSR KILLBUFF
+	LDA $0C
+	STA JDOS+1
+	LDA $0D
+	STA JDOS+2
+	LDA # <JDOS
+	STA $0C
+	LDA # >JDOS
+	STA $0D
+	LDA #0
+	STA 580
+	LDA #1
+	STA $09
+SKIPERAS JSR INIT2
+	JMP MAIN
+	*=  $2000
+	.INCLUDE chset.m65
+	.INCLUDE speed1.m65
+	.INCLUDE support.m65
+	.INCLUDE dospak.m65
+	.INCLUDE speed2.m65
+	.INCLUDE data.m65
+	.END

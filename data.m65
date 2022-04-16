@@ -1,128 +1,128 @@
-0100 MSG1 .BYTE "SpeedScript 3.0"
-0110     .BYTE 0
-0120 MSG2 .BYTE " by Charles Brannon"
-0130     .BYTE 0
-0140 KILLMSG .BYTE "Buffer Cleared"
-0150     .BYTE 0
-0160 BUFERR .BYTE "Buffer Full"
-0170     .BYTE 0
-0180 DELMSG .BYTE "Delete (S,W,P)"
-0190     .BYTE 0
-0200 YMSG .BYTE ": Are you sure? (Y/N):"
-0210     .BYTE 0
-0220 CLRMSG .BYTE "ERASE ALL TEXT"
-0230     .BYTE 0
-0240 ERASMSG .BYTE "Erase (S,W,P): “≈‘’“Œ to exit"
-0250     .BYTE 0
-0260 SAVMSG .BYTE "Save (Device:Filename)>"
-0270     .BYTE 0
-0280 ERRMSG .BYTE "Error #"
-0290     .BYTE 0
-0330 BRMSG .BYTE "BREAK Key Abort"
-0340     .BYTE 0
-0350 OKMSG .BYTE "No Errors"
-0360     .BYTE 0
-0370 LOADMSG .BYTE "Load (Device:Filename)>"
-0380     .BYTE 0
-0390 DIRMSG .BYTE " Press “≈‘’“Œ"
-0400     .BYTE 0
-0410 DIRNAME .BYTE "D1:*.*"
-0420 INSERR .BYTE "Memory Full"
-0430     .BYTE 0
-0440 INSMSG .BYTE "No text in buffer"
-0450     .BYTE 0
-0460 FNMSG .BYTE "Print (Device:Filename)>"
-0470     .BYTE 0
-0480 PRINMSG .BYTE "Printing..."
-0490     .BYTE 155,155,0
-0500 WAITMSG .BYTE "Insert next sheet, press “≈‘’“Œ"
-0510     .BYTE 0
-0520 SRCHMSG .BYTE "Find:"
-0530     .BYTE 0
-0540 NFMSG .BYTE "Not found"
-0550     .BYTE 0
-0560 REPMSG .BYTE "Change to:"
-0570     .BYTE 0
-0580 DIRINS .BYTE " √‘“Ã≠ƒelete Ãock ’nlock “ename ≈”√∆ormat √‘“Ã≠Ãoad  Drive [± ≤ ≥ ¥]: ",0
-0590 RENMSG .BYTE "Rename to:",0
-0600 FORMSG .BYTE "Format disk",0
-0610     .OPT NO OBJ
-0620 TEXSTART *= *+2
-0630 TEXEND *= *+2
-0640 TEXBUF *= *+2
-0650 BUFEND *= *+2
-0660 LENTABLE *= *+1
-0670 TOPLIN *= *+2
-0680 MSGFLG *= *+1
-0690 INSMODE *= *+1
-0700 ENDPOS *= *+1
-0710 FINPOS *= *+1
-0720 LASTLINE *= *+2
-0730 LIMIT *= *+1
-0740 INLEN *= *+1
-0750 BOTSCR *= *+2
-0760 LBUFF *= *+40
-0770 INBUFF *= *+40
-0780 SAVCURR *= *+2
-0790 BCD *=  *+2
-0800 HEX *=  *+2
-0810 TPTR *= *+2
-0820 BUFLEN *= *+2
-0830 GOBLEN *= *+2
-0840 FROMSAV *= *+2
-0850 DESTSAV *= *+2
-0860 HDLEN *= *+1
-0870 FTLEN *= *+1
-0880 LMARGIN *= *+1
-0890 RMARGIN *= *+1
-0900 PAGELENGTH *= *+1
-0910 TOPMARG *= *+1
-0920 BOTMARG *= *+1
-0930 SPACING *= *+1
-0940 CONTINUOUS *= *+1
-0950 PAGENUM *= *+2
-0960 STARTNUM *= *+2
-0970 PAGEWIDTH *= *+1
-0980 NOMARG *= *+1
-0990 POS *=  *+1
-1000 LINE *= *+1
-1010 YSAVE *= *+1
-1020 SAVCHAR *= *+1
-1030 INSLEN *= *+1
-1040 DEVNO *= *+1
-1050 NEEDASC *= *+1
-1060 UNDERLINE *= *+1
-1070 FPOS *= *+2
-1080 PCR *=  *+1
-1090 HUNTLEN *= *+1
-1100 HUNTBUFF *= *+30
-1110 REPLEN *= *+1
-1120 REPBUFF *= *+30
-1130 CODEBUFFER *= *+128
-1140 PRBUFF *= *+256
-1150 HDBUFF *= *+256
-1160 FIRSTRUN *= *+1
-1170 FTBUFF *= *+256
-1180 SAVCOL *= *+1
-1190 LINEFEED *= *+1
-1200 ESCFLAG *= *+1
-1210 CONVFLAG *= *+1
-1220 SELFLAG *= *+1
-1230 IOCB *= *+1
-1240 ACCESS *= *+1
-1250 FNBUFF *= *+40
-1260 FNLEN *= *+1
-1270 XSLOT *= *+1
-1280 SLOT *= *+130
-1290 XPTR *= *+1
-1300 WHICHFLAG *= *+1
-1310 DIRCOUNT *= *+1
-1320 BLINK *= *+1
-1330 LINELEN *= *+1
-1340 RLM *=  *+1
-1350 KEYVAL *= *+1
-1360 END =   *
-1370     .OPT OBJ
-1380     *=  $02E0
-1390     .WORD BEGIN
-1400     .END
+MSG1 .BYTE "SpeedScript 3.0"
+	.BYTE 0
+MSG2 .BYTE " by Charles Brannon"
+	.BYTE 0
+KILLMSG .BYTE "Buffer Cleared"
+	.BYTE 0
+BUFERR .BYTE "Buffer Full"
+	.BYTE 0
+DELMSG .BYTE "Delete (S,W,P)"
+	.BYTE 0
+YMSG .BYTE ": Are you sure? (Y/N):"
+	.BYTE 0
+CLRMSG .BYTE "ERASE ALL TEXT"
+	.BYTE 0
+ERASMSG .BYTE "Erase (S,W,P): “≈‘’“Œ to exit"
+	.BYTE 0
+SAVMSG .BYTE "Save (Device:Filename)>"
+	.BYTE 0
+ERRMSG .BYTE "Error #"
+	.BYTE 0
+BRMSG .BYTE "BREAK Key Abort"
+	.BYTE 0
+OKMSG .BYTE "No Errors"
+	.BYTE 0
+LOADMSG .BYTE "Load (Device:Filename)>"
+	.BYTE 0
+DIRMSG .BYTE " Press “≈‘’“Œ"
+	.BYTE 0
+DIRNAME .BYTE "D1:*.*"
+INSERR .BYTE "Memory Full"
+	.BYTE 0
+INSMSG .BYTE "No text in buffer"
+	.BYTE 0
+FNMSG .BYTE "Print (Device:Filename)>"
+	.BYTE 0
+PRINMSG .BYTE "Printing..."
+	.BYTE 155,155,0
+WAITMSG .BYTE "Insert next sheet, press “≈‘’“Œ"
+	.BYTE 0
+SRCHMSG .BYTE "Find:"
+	.BYTE 0
+NFMSG .BYTE "Not found"
+	.BYTE 0
+REPMSG .BYTE "Change to:"
+	.BYTE 0
+DIRINS .BYTE " √‘“Ã≠ƒelete Ãock ’nlock “ename ≈”√∆ormat √‘“Ã≠Ãoad  Drive [± ≤ ≥ ¥]: ",0
+RENMSG .BYTE "Rename to:",0
+FORMSG .BYTE "Format disk",0
+	.OPT NO OBJ
+TEXSTART *= *+2
+TEXEND *= *+2
+TEXBUF *= *+2
+BUFEND *= *+2
+LENTABLE *= *+1
+TOPLIN *= *+2
+MSGFLG *= *+1
+INSMODE *= *+1
+ENDPOS *= *+1
+FINPOS *= *+1
+LASTLINE *= *+2
+LIMIT *= *+1
+INLEN *= *+1
+BOTSCR *= *+2
+LBUFF *= *+40
+INBUFF *= *+40
+SAVCURR *= *+2
+BCD *=  *+2
+HEX *=  *+2
+TPTR *= *+2
+BUFLEN *= *+2
+GOBLEN *= *+2
+FROMSAV *= *+2
+DESTSAV *= *+2
+HDLEN *= *+1
+FTLEN *= *+1
+LMARGIN *= *+1
+RMARGIN *= *+1
+PAGELENGTH *= *+1
+TOPMARG *= *+1
+BOTMARG *= *+1
+SPACING *= *+1
+CONTINUOUS *= *+1
+PAGENUM *= *+2
+STARTNUM *= *+2
+PAGEWIDTH *= *+1
+NOMARG *= *+1
+POS *=  *+1
+LINE *= *+1
+YSAVE *= *+1
+SAVCHAR *= *+1
+INSLEN *= *+1
+DEVNO *= *+1
+NEEDASC *= *+1
+UNDERLINE *= *+1
+FPOS *= *+2
+PCR *=  *+1
+HUNTLEN *= *+1
+HUNTBUFF *= *+30
+REPLEN *= *+1
+REPBUFF *= *+30
+CODEBUFFER *= *+128
+PRBUFF *= *+256
+HDBUFF *= *+256
+FIRSTRUN *= *+1
+FTBUFF *= *+256
+SAVCOL *= *+1
+LINEFEED *= *+1
+ESCFLAG *= *+1
+CONVFLAG *= *+1
+SELFLAG *= *+1
+IOCB *= *+1
+ACCESS *= *+1
+FNBUFF *= *+40
+FNLEN *= *+1
+XSLOT *= *+1
+SLOT *= *+130
+XPTR *= *+1
+WHICHFLAG *= *+1
+DIRCOUNT *= *+1
+BLINK *= *+1
+LINELEN *= *+1
+RLM *=  *+1
+KEYVAL *= *+1
+END =   *
+	.OPT OBJ
+	*=  $02E0
+	.WORD BEGIN
+	.END
