@@ -125,4 +125,3 @@ END =   *
 	.OPT OBJ
 	*=  $02E0
 	.WORD BEGIN
-	.END

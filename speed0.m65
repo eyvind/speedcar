@@ -61,4 +61,3 @@ SKIPERAS JSR INIT2
 	.INCLUDE dospak.m65
 	.INCLUDE speed2.m65
 	.INCLUDE data.m65
-	.END
