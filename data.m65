@@ -26,7 +26,8 @@ LOADMSG .BYTE "Load (Device:Filename)>"
 	.BYTE 0
 DIRMSG .BYTE " Press “≈‘’“Œ"
 	.BYTE 0
-DIRNAME .BYTE "D1:*.*"
+DIRNAME_ .BYTE "D1:*.*"
+DIRSIZE = *-DIRNAME_
 INSERR .BYTE "Memory Full"
 	.BYTE 0
 INSMSG .BYTE "No text in buffer"
@@ -47,6 +48,14 @@ DIRINS .BYTE " √‘“Ã≠ƒelete Ãock ’nlock “ename ≈”√∆ormat √‘“Ã≠Ãoad  Drive
 RENMSG .BYTE "Rename to:",0
 FORMSG .BYTE "Format disk",0
 	.OPT NO OBJ
+
+	*= MEMCOPY+MEMCPSZ
+CHRYSAVE *= *+1
+DIRNAME *= *+DIRSIZE
+SCRCOL *= *+1
+TEXCOLR *= *+1
+
+	*= VARS
 TEXSTART *= *+2
 TEXEND *= *+2
 TEXBUF *= *+2

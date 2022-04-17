@@ -5,7 +5,7 @@
 ;*       D:SPEED.0 *
 ;*                 *
 ;*******************
-	*=  $1F00
+	*=  $A000
 FROML = $80
 FROMH = $81
 DESTL = $82
@@ -31,6 +31,9 @@ ICAUX2 = $034B
 ICSTAT = $0343
 SHFLOK = $02BE
 CIO =   $E456
+MEMCOPY = $1F00
+CHSET =  $2000
+VARS =   $2400
 BEGIN LDA 710
 	STA 709
 	JSR INIT
@@ -52,10 +55,14 @@ BEGIN LDA 710
 	STA 580
 	LDA #1
 	STA $09
+	LDA #8
+	STA SCRCOL
+	LDA #2
+	STA TEXCOLR
+	JSR RAMCOPY
 SKIPERAS JSR INIT2
 	JMP MAIN
-	*=  $2000
-	.INCLUDE chset.m65
+CHSET_ .INCLUDE chset.m65
 	.INCLUDE speed1.m65
 	.INCLUDE support.m65
 	.INCLUDE dospak.m65
