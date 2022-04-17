@@ -71,8 +71,6 @@ CHRYSAVE *= *+1
 DIRNAME *= *+DIRSIZE
 SCRCOL *= *+1
 TEXCOLR *= *+1
-
-	*= VARS
 TEXSTART *= *+2         ; Start-of-text area
 TEXEND *= *+2           ; End-of-text area
 TEXBUF *= *+2           ; Start of buffer
@@ -125,7 +123,6 @@ HUNTBUFF *= *+30        ; Holds hunt phrase
 REPLEN *= *+1           ; Length of replace phrase
 REPBUFF *= *+30         ; Holds replace phrase
 CODEBUFFER *= *+128     ; Holds definable printkeys
-PRBUFF *= *+256         ; Printer line buffer
 HDBUFF *= *+256         ; Holds header
 FIRSTRUN *= *+1         ; Has program been run before?
 FTBUFF *= *+256         ; Holds footer

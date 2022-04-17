@@ -61,9 +61,9 @@ CIO =   $E456
 ; you may need to reassemble SpeedScript at a
 ; higher address, usually the address of LOMEM plus
 ; 256 bytes to be safe.
-MEMCOPY = $1F00
-CHSET =  $2000
-VARS =   $2400
+PRBUFF = $1F00         ; Printer line buffer
+CHSET =  $2000         ; Character set (must be aligned to 512 bytes)
+MEMCOPY = CHSET+$400   ; Self-modifying code and variables
 
 ; Called only when run from DOS. It is assumed that
 ; the author's initials (that conveniently work out
