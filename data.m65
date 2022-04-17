@@ -47,6 +47,12 @@ REPMSG .BYTE "Change to:"
 DIRINS .BYTE " √‘“Ã≠ƒelete Ãock ’nlock “ename ≈”√∆ormat √‘“Ã≠Ãoad  Drive [± ≤ ≥ ¥]: ",0
 RENMSG .BYTE "Rename to:",0
 FORMSG .BYTE "Format disk",0
+	*= $BFFA
+	.WORD BEGIN
+	.BYTE 0
+	.BYTE 5
+	.WORD PREXIT
+
 	.OPT NO OBJ
 
 	*= MEMCOPY+MEMCPSZ
@@ -131,6 +137,3 @@ LINELEN *= *+1
 RLM *=  *+1
 KEYVAL *= *+1
 END =   *
-	.OPT OBJ
-	*=  $02E0
-	.WORD BEGIN
