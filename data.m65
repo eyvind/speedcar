@@ -1,3 +1,7 @@
+; Data tables
+
+; Messages are stored in ATASCII, with a
+; zero byte for a delimiter.
 MSG1 .BYTE "SpeedScript 3.0"
 	.BYTE 0
 MSG2 .BYTE " by Charles Brannon"
@@ -47,11 +51,18 @@ REPMSG .BYTE "Change to:"
 DIRINS .BYTE " √‘“Ã≠ƒelete Ãock ’nlock “ename ≈”√∆ormat √‘“Ã≠Ãoad  Drive [± ≤ ≥ ¥]: ",0
 RENMSG .BYTE "Rename to:",0
 FORMSG .BYTE "Format disk",0
+
+; Cartridge header
 	*= $BFFA
 	.WORD BEGIN
 	.BYTE 0
 	.BYTE 5
 	.WORD PREXIT
+
+; The .OPT NO OBJ and .OPT OBJ pseudo-ops
+; turn on and off object code generation.
+; This insures that no object code is
+; generated for the variable table.
 
 	.OPT NO OBJ
 
@@ -62,78 +73,78 @@ SCRCOL *= *+1
 TEXCOLR *= *+1
 
 	*= VARS
-TEXSTART *= *+2
-TEXEND *= *+2
-TEXBUF *= *+2
-BUFEND *= *+2
-LENTABLE *= *+1
-TOPLIN *= *+2
-MSGFLG *= *+1
-INSMODE *= *+1
-ENDPOS *= *+1
-FINPOS *= *+1
-LASTLINE *= *+2
-LIMIT *= *+1
-INLEN *= *+1
-BOTSCR *= *+2
-LBUFF *= *+40
-INBUFF *= *+40
-SAVCURR *= *+2
-BCD *=  *+2
-HEX *=  *+2
-TPTR *= *+2
-BUFLEN *= *+2
-GOBLEN *= *+2
-FROMSAV *= *+2
-DESTSAV *= *+2
-HDLEN *= *+1
-FTLEN *= *+1
-LMARGIN *= *+1
-RMARGIN *= *+1
-PAGELENGTH *= *+1
-TOPMARG *= *+1
-BOTMARG *= *+1
-SPACING *= *+1
-CONTINUOUS *= *+1
-PAGENUM *= *+2
-STARTNUM *= *+2
-PAGEWIDTH *= *+1
-NOMARG *= *+1
-POS *=  *+1
-LINE *= *+1
-YSAVE *= *+1
-SAVCHAR *= *+1
-INSLEN *= *+1
-DEVNO *= *+1
-NEEDASC *= *+1
-UNDERLINE *= *+1
-FPOS *= *+2
-PCR *=  *+1
-HUNTLEN *= *+1
-HUNTBUFF *= *+30
-REPLEN *= *+1
-REPBUFF *= *+30
-CODEBUFFER *= *+128
-PRBUFF *= *+256
-HDBUFF *= *+256
-FIRSTRUN *= *+1
-FTBUFF *= *+256
-SAVCOL *= *+1
-LINEFEED *= *+1
-ESCFLAG *= *+1
-CONVFLAG *= *+1
-SELFLAG *= *+1
-IOCB *= *+1
-ACCESS *= *+1
-FNBUFF *= *+40
-FNLEN *= *+1
-XSLOT *= *+1
-SLOT *= *+130
-XPTR *= *+1
-WHICHFLAG *= *+1
-DIRCOUNT *= *+1
-BLINK *= *+1
-LINELEN *= *+1
-RLM *=  *+1
-KEYVAL *= *+1
-END =   *
+TEXSTART *= *+2         ; Start-of-text area
+TEXEND *= *+2           ; End-of-text area
+TEXBUF *= *+2           ; Start of buffer
+BUFEND *= *+2           ; End-of-buffer area
+LENTABLE *= *+1         ; Length of first screen line
+TOPLIN *= *+2           ; Home position in text
+MSGFLG *= *+1           ; Message flag
+INSMODE *= *+1          ; Insert mode
+ENDPOS *= *+1           ; Used by delete routines
+FINPOS *= *+1           ; "
+LASTLINE *= *+2         ; End-of-text position
+LIMIT *= *+1            ; Used by INPUT
+INLEN *= *+1            ; "
+BOTSCR *= *+2           ; Bottom of screen in text
+LBUFF *= *+40           ; Linebuffer (REFRESH)
+INBUFF *= *+40          ; INPUT buffer
+SAVCURR *= *+2          ; Used by delete routines
+BCD *=  *+2             ; Used by ASCHEX
+HEX *=  *+2             ; "
+TPTR *= *+2             ; Last character in buffer
+BUFLEN *= *+2           ; Buffer length
+GOBLEN *= *+2           ; Size of deleted text
+FROMSAV *= *+2          ; Used by delete routines
+DESTSAV *= *+2          ; "
+HDLEN *= *+1            ; Header length
+FTLEN *= *+1            ; Footer length
+LMARGIN *= *+1          ; Holds left margin
+RMARGIN *= *+1          ; Right margin
+PAGELENGTH *= *+1       ; Page length
+TOPMARG *= *+1          ; Top margin
+BOTMARG *= *+1          ; Bottom margin
+SPACING *= *+1          ; Line spacing
+CONTINUOUS *= *+1       ; Pagewait mode
+PAGENUM *= *+2          ; Page number
+STARTNUM *= *+2         ; Start printing at #
+PAGEWIDTH *= *+1        ; Columns across
+NOMARG *= *+1           ; Margin release flag
+POS *=  *+1             ; POSition within line
+LINE *= *+1             ; Linecount
+YSAVE *= *+1            ; Preserves Y register
+SAVCHAR *= *+1          ; Preserves accumulator
+INSLEN *= *+1           ; Length of an insertion
+DEVNO *= *+1            ; Device number
+NEEDASC *= *+1          ; True ASCII flag
+UNDERLINE *= *+1        ; Underline mode flag
+FPOS *= *+2             ; Found position
+PCR *=  *+1             ; Used by PCHROUT
+HUNTLEN *= *+1          ; Length of hunt phrase
+HUNTBUFF *= *+30        ; Holds hunt phrase
+REPLEN *= *+1           ; Length of replace phrase
+REPBUFF *= *+30         ; Holds replace phrase
+CODEBUFFER *= *+128     ; Holds definable printkeys
+PRBUFF *= *+256         ; Printer line buffer
+HDBUFF *= *+256         ; Holds header
+FIRSTRUN *= *+1         ; Has program been run before?
+FTBUFF *= *+256         ; Holds footer
+SAVCOL *= *+1           ; Save SCRCOL
+LINEFEED *= *+1         ; Linefeed mode flag
+ESCFLAG *= *+1          ; Was ESC pressed?
+CONVFLAG *= *+1         ; Used by CAST and CINTOAS
+SELFLAG *= *+1          ; The SELECT key flag
+IOCB *= *+1             ; Which IOCB is OPEN
+ACCESS *= *+1           ; Direction of ACCESS (read/write)
+FNBUFF *= *+40          ; Filename buffer
+FNLEN *= *+1            ; Filename length
+XSLOT *= *+1            ; Number of filename slots (DOSPAK)
+SLOT *= *+130           ; Slot positions (DOSPAK)
+XPTR *= *+1             ; Current filename slot (DOSPAK)
+WHICHFLAG *= *+1        ; Which key is pressed
+DIRCOUNT *= *+1         ; Directory count
+BLINK *= *+1            ; Cursor blink flag
+LINELEN *= *+1          ; Length of screen lines
+RLM *=  *+1             ; REFRESH Left margin value
+KEYVAL *= *+1           ; Which key is pressed
+END =   *               ; High byte of this +$100 is TEXSTART

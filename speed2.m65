@@ -1,3 +1,23 @@
+; This is the main input/output portion
+; of SpeedScript, responsible for loading,
+; saving, and all printing functions.
+
+; CAST and CINSTOAS (standing for Convert
+; to ASCII and Convert INTernal code to
+; ASCII) translate the way SpeedScript
+; stores text in memory (internal screen
+; codes) into ASCII so that disk files
+; will be compatible with most other
+; software. In addition, the return- mark
+; is changed to character 155, and vice
+; versa. This is why you can't load a
+; machine language file into SpeedScript,
+; edit it, then save it back as a
+; runnable modification. All back-arrows
+; are turned into carriage returns on
+; output, and all carriage returns
+; (155's) are turned into back-arrows
+; (30's) on input.
 CAST  LDA #0
 	STA CONVFLAG
 	JMP CAST1
@@ -41,6 +61,23 @@ OVEROTHER STA (TEX),Y
 	DEX
 	BNE CVLOOP
 	RTS
+
+; Here is where most of the input/output
+; routines start. TSAVE saves the entire
+; document area using the CIO block
+; output routine (PUT TEXT). TOPEN is
+; called by both TSAVE and TLOAD to get
+; the filename and open the file. The
+; device specification (D: or C:) must be
+; typed in by the user.
+
+; TSAVE prints the Save: prompt, goes to
+; TOPEN with an 8 (for output, the same
+; number in OPEN 1,8,0,"D:file"), and
+; uses IOCB #7 (LDX #$70) to send a PUT
+; TEXT command (11). Text is written from
+; the start-of-text with a length of
+; LASTLINE - TEXSTART.
 TSAVE JSR TOPCLR
 	LDA # <SAVMSG
 	LDY # >SAVMSG
@@ -64,6 +101,11 @@ TSAVE JSR TOPCLR
 	LDA #11
 	STA ICCOM,X
 	JSR CIO
+	; The N (negative) bit is set when an
+	; error occurs after a call to CIO or a
+	; routine that ends up calling CIO.
+	; Therefore, we can use BMI to branch on
+	; an error condition.
 	BMI ERR1
 	JSR CAST
 	JSR CLOSE7
@@ -74,6 +116,15 @@ ERR1 TYA
 	JSR CAST
 	PLA
 	TAY
+
+; The error routine uses the error number
+; found in the Y register, prints the
+; error message with PRMSG, and the error
+; number with OUTNUM. The open file is
+; closed. If the BREAK key was used to
+; stop the operation, we distinguish this
+; from an ordinary error, and print
+; "BREAK Abort" instead.
 ERROR CPY #128
 	BEQ STOPPED
 	TYA
@@ -97,18 +148,36 @@ STOPPED JSR TOPCLR
 	LDY # >BRMSG
 	JSR PRMSG
 	JMP ERXIT
+
+; General file closing routine. IOCB
+; contains the channel number times 16.
 IOCLOSE LDX IOCB
 	LDA #12
 	STA ICCOM,X
 	JMP CIO
+
+; TOPEN is used to get a filename,
+; including the device specification.
+; It's used by Save, Load, and Print. It
+; forces the CAPS key to uppercase for
+; the filename, which is not quite as
+; satisfactory as converting the filename
+; if lowercase was used. It does return
+; the CAPS key to its former value,
+; though. TOPEN opens the file and
+; returns with the error code in the Y
+; register.
 TOPEN LDX #$70
 	STX IOCB
 	STA ACCESS
+	; Save current CAPS value.
 	LDA SHFLOK
 	PHA
+	; CAPS On.
 	LDA #64
 	STA SHFLOK
 	JSR INPUT
+	; Restore CAPS value.
 	PLA
 	STA SHFLOK
 	LDA INLEN
@@ -132,6 +201,37 @@ OPCONT JSR IOCLOSE
 	LDA #3
 	STA ICCOM,X
 	JMP CIO
+
+; The Load routine checks the cursor
+; position. If the cursor is at the
+; top-of-text (CURR=TEXSTART), we call
+; the ERASE routine to wipe out memory
+; before the load. Otherwise, the load
+; starts at the cursor position,
+; performing an append, and we change the
+; command line to green ($C4, sorry about
+; not using a label) to warn the user. We
+; open the file for reading by passing a
+; 4 to TOPEN, then at LOADLINK use GET
+; TEXT (command 7) to get no more than
+; the length of the text area. The actual
+; length loaded is found in ICBLEN, so we
+; add this to TEXSTART and the offset
+; between the cursor position and
+; TEXSTART to get the position of the
+; end-of-text (LASTLINE).
+
+; A funny thing happens, though. Up to
+; 255 garbage characters appear following
+; an otherwise normal load, after the
+; end-of-text. I was never able to figure
+; out why (and I puzzled over it for a
+; week), so I wrote a stopgap routine to
+; just clear out one page past the
+; end-of-text. The bug is not fixed per
+; se, but it has no effect anymore! I
+; still think it must be the fault of the
+; operating system (I know...).
 TLOAD SEC
 	LDA CURR
 	SBC TEXSTART
@@ -162,6 +262,8 @@ NOER JSR LOADLINK
 	BCC JFINE
 	JMP ERROR
 JFINE JMP FINE
+
+; Entry point for linked files loading.
 LOADLINK LDX IOCB
 	LDA CURR
 	STA ICBADR,X
@@ -216,6 +318,9 @@ PROKMSG LDA #125
 	LDY # >OKMSG
 	JSR PRMSG
 	JMP ERXIT
+
+; Disable display-list interrupt and
+; restore screen colors.
 DELITE LDA #$40
 	STA $D40E
 	LDA SCRCOL
@@ -224,6 +329,27 @@ DELITE LDA #$40
 	LDA TEXCOLR
 	STA 709
 	RTS
+
+; A rather short routine that converts a
+; string of ASCII digits into a number in
+; hex and the accumulator. It takes
+; advantage of decimal mode. In decimal
+; mode, the accumulator is adjusted after
+; additions and subtractions so that it
+; acts like a two-digit decimal counter.
+; We shift BCD over a nybble and add in
+; the left nybble of the ASCII number
+; until we reach the end of the ASCII
+; number. We then subtract 1 from BCD and
+; increment X (which doesn't conform to
+; decimal mode) until BCD is down to 0.
+; The X register magically holds the
+; converted number. Naturally, decimal
+; mode is cleared before this routine
+; exits, or it would wreak major havoc.
+; ASCHEX is used to convert the
+; parameters of printer commands like
+; left margin.
 ASCHEX LDX #0
 	STX BCD
 	STX BCD+1
@@ -267,6 +393,14 @@ NOHEXINC JMP DECHEX
 DONENUM LDA HEX
 	CLD
 	RTS
+
+; Insert the buffer. This is the recall
+; routine called by CTRL-R. It must not
+; allow an insertion that would overfill
+; memory. It calls DMOVE to open a space
+; in memory, then UMOVE (which is a
+; little faster than DMOVE) to copy the
+; buffer to the empty space.
 INSBUFFER SEC
 	LDA TPTR
 	SBC TEXBUF
@@ -330,6 +464,12 @@ OKMOV JSR DMOVE
 	STA FROMH
 	JSR UMOVE
 	JMP CHECK
+
+; Exchange the character highlighted by
+; the cursor with the character to the
+; right of it. Not a vital command, but
+; it was included due to the brevity of
+; the code.
 SWITCH LDY #0
 	LDA (CURR),Y
 	TAX
@@ -341,6 +481,9 @@ SWITCH LDY #0
 	TXA
 	STA (CURR),Y
 	RTS
+
+; Change the case of the character
+; highlighted by the cursor.
 ALPHA LDY #0
 	LDA (CURR),Y
 	AND #63
@@ -352,6 +495,12 @@ ALPHA LDY #0
 	EOR #64
 	STA (CURR),Y
 NOTALPHA JMP RIGHT
+
+; Convert internal (screen code) format
+; to Atari ASCII (ATASCII). Used to
+; convert the screen-code format of
+; SpeedScript documents to ASCII for the
+; sake of printing.
 INTOAS PHA
 	AND #128
 	STA TEMP
@@ -366,8 +515,33 @@ INCONT CMP #64
 INT1 ADC #32
 XINT ORA TEMP
 	RTS
+
+; The start of the printer routines. This
+; part could logically be called a
+; separate program, but many variables
+; are common to the above code.
+
+; DEFTAB: Table of default settings for
+; left margin, right margin, page length,
+; top margin, bottom margin, etc. See the
+; table starting at LMARGIN at the end of
+; this source code.
 DEFTAB .BYTE 5,75,66,5,58,1,1,1,0,1,0,80
+
+; Table of default printer codes.
 PRCODES .BYTE 27,14,15,18
+
+; Another advantage of modular coding is
+; that you can change the behavior of a
+; lot of code by just changing one small
+; common routine. This is a substitute
+; for the normal CHROUT routine. It
+; checks to see if the current page
+; number equals the page number specified
+; by the user to start printing. It also
+; checks for the BREAK to abort the
+; printing and permits printing to be
+; paused with CTRL-1.
 PCHROUT STA PCR
 	TXA
 	PHA
@@ -406,11 +580,21 @@ SKIPOUT PLA
 	TAX
 	LDA PCR
 	RTS
+
+; Displays "Printing..."
 PRIN JSR TOPCLR
 	LDA # <PRINMSG
 	LDY # >PRINMSG
 	JMP PRMSG
 PBORT JMP PEXIT
+
+; Called by CTRL-P. We get the filename
+; to print to (usually P:, although you
+; can use E: to print to the screen) with
+; ICAUX1 set to 8 for output. We exit on
+; any error. The DELITE routine turns off
+; the display-list interrupt, which might
+; otherwise interfere with output timing.
 PRINT JSR TOPCLR
 	LDA # <FNMSG
 	LDY # >FNMSG
@@ -420,6 +604,17 @@ PRINT JSR TOPCLR
 	JSR TOPEN
 	BPL PROK
 	JMP PEXIT
+
+; Reset several flags (footer length,
+; header length, true ASCII, underline
+; mode, and linefeed mode). Notice how
+; DELITE is called again. This isn't a
+; mistake. The first time we called
+; DELITE, we then may have opened a file
+; to the Editor device. This reset the
+; screen to the default colors, so the
+; second DELITE retains the user's true
+; color choice.
 PROK JSR DELITE
 	JSR PRIN
 	LDX #0
@@ -428,6 +623,8 @@ PROK JSR DELITE
 	STX NEEDASC
 	STX UNDERLINE
 	STX LINEFEED
+	; Copy definition tables and default
+	; printer codes.
 COPYDEF LDA DEFTAB,X
 	STA LMARGIN,X
 	INX
@@ -441,10 +638,22 @@ COPYDEFS LDA PRCODES-1,X
 	STA CODEBUFFER+16,X
 	DEX
 	BNE COPYDEFS
+	; Reentry point for printing after linked
+	; files.
 RETEX LDA TEXSTART
 	STA TEX
 	LDA TEXSTART+1
 	STA TEX+1
+
+; Main printing loop. We print the left
+; margin, grab a line of text, scan
+; backward until we find a space or a
+; carriage return, then break the line
+; there. If printer codes are
+; encountered, they're passed on to the
+; SPECIAL routine. Otherwise, we end up
+; calling BUFPRT to print the line and
+; process some other control codes.
 PLOOP LDY #0
 	STY POS
 	CPY NOMARG
@@ -484,6 +693,8 @@ OVERSTOR TYA
 	ADC #0
 	STA TEX+1
 	LDY #0
+	; If this is the first page, we need to print
+	; the header, if any, with JSR TOP.
 DOBUFF LDA LINE
 	CMP #$FF
 	BNE DOBUF2
@@ -500,11 +711,17 @@ OVERMARG SEC
 	LDA # >PRBUFF
 	STA INDIR+1
 	JSR BUFPRT
+	; A line has been printed. We check to
+	; see if we've hit the bottom margin and,
+	; if so, go to PAGE, which goes to the
+	; end of the page, prints the footer (if
+	; any), and feeds to the next page.
 ZBUFF JSR CRLF
 	LDA LINE
 	CMP BOTMARG
 	BCC NOTPAGE
 	JSR PAGE
+	; Have we reached the end-of-text?
 NOTPAGE SEC
 	LDA TEX
 	SBC LASTLINE
@@ -514,12 +731,23 @@ NOTPAGE SEC
 	ORA TEMP
 	BEQ DORPT
 	BCC DORPT
+	; If so, we check for a footer. If there
+	; is one, we set HDLEN and TOPMARG to 0
+	; (so that the printhead will end up at
+	; the right place on the last page) and
+	; call PAGE, which prints the footer. If
+	; there is no footer, we leave the
+	; printhead on the same page so that
+	; paper isn't wasted.
 	LDA FTLEN
 	BEQ PXIT
 	LDA #0
 	STA HDLEN
 	STA TOPMARG
 	JSR PAGE
+	; Exit routines. If screen output was
+	; selected, we wait for a keystroke
+	; before going back to editing mode.
 PXIT LDA INBUFF
 	CMP #'E
 	BNE PEXIT
@@ -538,6 +766,16 @@ PEXIT JSR CLOSE7
 	JSR SYSMSG
 	JMP MAIN
 DORPT JMP PLOOP
+
+; Paging routines. We skip (PAGELENGTH -
+; LINE) - two blank lines to get to the
+; bottom of the page, print a footer (if
+; there is one) or a blank line (if not),
+; then page to the beginning of the next
+; page, skipping over the paper
+; perforation. If the wait mode is
+; enabled, we wait for the user to insert
+; a new sheet of paper.
 PAGE SEC
 	LDA PAGELENGTH
 	SBC LINE
@@ -561,9 +799,14 @@ NOSK LDA FTLEN
 SKIPFT JSR CR
 	JSR CR
 	JSR CR
+	; Increment the page number.
 	INC PAGENUM
 	BNE NOIPN
 	INC PAGENUM+1
+	; The page wait mode is inappropriate
+	; when printing to the screen or to disk,
+	; or when skipping over pages with the ?
+	; format command.
 NOIPN LDA CONTINUOUS
 	BNE TOP
 	SEC
@@ -578,6 +821,8 @@ NOIPN LDA CONTINUOUS
 	JSR PRMSG
 	JSR GETAKEY
 	JSR PRIN
+	; Print the header; skip to the top
+	; margin.
 TOP LDA HDLEN
 	BEQ NOHEADER
 	STA ENDPOS
@@ -596,6 +841,10 @@ TOPLP JSR CR
 	DEY
 	BNE TOPLP
 SKIPTOP RTS
+
+; Left margin routine. This routine is not
+; called if NOMARG is selected (margin
+; release).
 LMARG LDA #32
 	LDY LMARGIN
 	STY POS
@@ -604,6 +853,12 @@ LMLOOP JSR PCHROUT
 	DEY
 	BNE LMLOOP
 LMEXIT RTS
+
+; CRLF is called at the end of most
+; printed lines. It increments the LINE
+; count and takes into account the
+; current line spacing mode set by the a
+; format command.
 CRLF LDY SPACING
 	CLC
 	TYA
@@ -613,12 +868,19 @@ CRLOOP JSR CR
 	DEY
 	BNE CRLOOP
 	RTS
+
+; CR just prints a single carriage return
+; and linefeed (if specified).
 CR  LDA #155
 	JSR PCHROUT
 	LDA LINEFEED
 	BEQ NOLF
 	JSR PCHROUT
 NOLF RTS
+
+; Handle special printer codes like left
+; margin. This looks up the printer code
+; using a routine similar to CONTROL.
 SPECIAL STA SAVCHAR
 	AND #127
 	JSR INTOAS
@@ -643,6 +905,11 @@ FSP DEX
 	LDA SPVECT,X
 	PHA
 	RTS
+
+; After the format code is processed, we
+; must skip over the format command
+; and its parameter so that it's not
+; printed.
 SPCONT SEC
 	LDA YSAVE
 	ADC TEX
@@ -651,71 +918,109 @@ SPCONT SEC
 	ADC #0
 	STA TEX+1
 	JMP PLOOP
+
+; If the format command ends with a
+; return-mark, we must skip over the
+; return-mark as well.
 SPCEXIT LDA (TEX),Y
 	CMP #RETCHAR
 	BEQ NOAD
 	DEY
 NOAD STY YSAVE
 	RTS
+
+; Special format code table. It starts with
+; the number of format commands, then
+; the characters for each format
+; command.
 SPTAB .BYTE 17
 	.BYTE "wlrtbsnhf@p?xmigj"
+
+; The address-1 of each format routine.
 SPVECT .WORD PW-1,LM-1,RM-1,TP-1
 	.WORD BT-1,SP-1,NX-1,HD-1,FT-1
 	.WORD PN-1,PL-1,SPAGE-1,ACROSS-1
 	.WORD MRELEASE-1,COMMENT-1,LINK-1
 	.WORD LFSET-1
+
+; m Margin release. INY is used to skip
+; over the format character.
 MRELEASE INY
 	LDA #0
 	STA NOMARG
 	JMP SPCEXIT
+
+; x Columns across, used by centering.
 ACROSS INY
 	JSR ASCHEX
 	STA PAGEWIDTH
 	JMP SPCEXIT
+
+; ? Start printing at specified page.
 SPAGE INY
 	JSR ASCHEX
 	STA STARTNUM
 	LDA HEX+1
 	STA STARTNUM+1
 	JMP SPCEXIT
+
+; @ Set starting default page number.
 PN  INY
 	JSR ASCHEX
 	STA PAGENUM
 	LDA HEX+1
 	STA PAGENUM+1
 	JMP SPCEXIT
+
+; p Page length.
 PL  INY
 	JSR ASCHEX
 	STA PAGELENGTH
 	JMP SPCEXIT
+
+; w Set page wait mode.
 PW  LDA #0
 	STA CONTINUOUS
 	INY
 	JMP SPCEXIT
+
+; j Set linefeed mode.
 LFSET LDA #10
 	STA LINEFEED
 	INY
 	JMP SPCEXIT
+
+; l Left margin.
 LM  INY
 	JSR ASCHEX
 	STA LMARGIN
 	JMP SPCEXIT
+
+; r Right margin.
 RM  INY
 	JSR ASCHEX
 	STA RMARGIN
 	JMP SPCEXIT
+
+; t Top margin.
 TP  INY
 	JSR ASCHEX
 	STA TOPMARG
 	JMP SPCEXIT
+
+; b Bottom margin.
 BT  INY
 	JSR ASCHEX
 	STA BOTMARG
 	JMP SPCEXIT
+
+; s Set line spacing.
 SP  INY
 	JSR ASCHEX
 	STA SPACING
 	JMP SPCEXIT
+
+; n Jump to next page.
 NX  LDY YSAVE
 	INY
 	TYA
@@ -725,6 +1030,9 @@ NX  LDY YSAVE
 	TAY
 	STY YSAVE
 	RTS
+
+; h Define header. Copy header into
+; header buffer.
 HD  JSR PASTRET
 	DEY
 	STY HDLEN
@@ -737,11 +1045,15 @@ HDCOPY LDA (TEX),Y
 	BEQ HDCOPY
 	INY
 	JMP SPCEXIT
+
+; Skip just past the return-mark.
 PASTRET INY
 	LDA (TEX),Y
 	CMP #RETCHAR
 	BNE PASTRET
 	RTS
+
+; f Define footer.
 FT  JSR PASTRET
 	DEY
 	STY FTLEN
@@ -753,8 +1065,19 @@ FTCOPY LDA (TEX),Y
 	BCC FTCOPY
 	BEQ FTCOPY
 	JMP SPCEXIT
+
+; i Ignore a line of information.
 COMMENT JSR PASTRET
 	JMP SPCEXIT
+
+; Define programmable printkeys. We
+; check for =. If not found, this is not an
+; assignment, so we just skip past the
+; code. Otherwise, we use the screen
+; code value as the index into the
+; CODEBUFFER and put the value there,
+; ready to be called during printing by
+; BUFPRT.
 DEFINE INY
 	LDA (TEX),Y
 	CMP #'=-32
@@ -772,6 +1095,16 @@ DODEFINE INY
 	STA CODEBUFFER,X
 	JSR SPCEXIT
 	JMP SPCONT
+
+; g Link to next file. We get the
+; filename from text and put it into the
+; input buffer, just as if the filename
+; were typed in with INPUT. We then jump
+; into the TOPEN routine to open the
+; file, and into the Load routine to load
+; the file. After the load, we check for
+; a load error, then jump to RETEX to
+; continue printing.
 LINK LDY #1
 	LDX #0
 FNCOPY LDA (TEX),Y
@@ -805,6 +1138,13 @@ LCONT PLA
 	LDX #$70
 	STA IOCB
 	JMP RETEX
+
+; Global search and replace. This just
+; links together the search-specify
+; routine, the replace-specify routine,
+; then repeatedly calls Hunt and Replace,
+; until Hunt returns "Not Found." (FPOS+1
+; is $FF after a search failure.)
 SANDR JSR RESET
 	LDA HUNTLEN
 	BEQ NOSR
@@ -817,6 +1157,23 @@ SNR JSR CONTSRCH
 	JSR REFRESH
 	JMP SNR
 NOSR JMP SYSMSG
+
+; If OPTION is held down with CTRL-F, we
+; ask for and store the search phrase. If
+; OPTION is not down, we perform the
+; actual search. The line in the INBUFF
+; is compared with characters in text. If
+; at any point the search fails, we
+; continue the comparison with the first
+; character of INBUFF. The search is a
+; failure if we reach the end-of-text. If
+; the entire length of INBUFF matches,
+; the search succeeds, so we change the
+; CURRent cursor position to the found
+; position, save the found position for
+; the sake of the replace routine, then
+; call CHECK to scroll to the found
+; position.
 HUNT LDA #8
 	STA 53279
 	LDA 53279
@@ -894,6 +1251,19 @@ NOTFOUND JSR TOPCLR
 	LDA #1
 	STA MSGFLG
 	RTS
+
+; The change (replace) routine checks to
+; see if OPTION is held down with CTRL-C.
+; If it is, we ask for a replace phrase,
+; and exit. If not, we check to see if
+; the cursor is at the position
+; previously located by the search
+; routine. If it is, we delete the found
+; phrase, then insert the replace phrase.
+; The cursor is moved past the replace
+; phrase for the sake of the next search.
+; This also prevents endless recursion,
+; as in replacing in with winner.
 REPSTART LDA #8
 	STA 53279
 	LDA 53279
@@ -968,6 +1338,12 @@ REPLOOP LDA REPBUFF,Y
 	ADC #0
 	STA CURR+1
 NOREPL JMP CHECK
+
+; Suddenly, we're back to a PRINT
+; subroutine. This examines the buffer as
+; it's being printed, checking for
+; printkeys and Stage 2 commands like
+; centering.
 BUFPRT LDY #0
 BUFLP CPY ENDPOS
 	BEQ ENDBUFF
@@ -975,6 +1351,9 @@ BUFLP CPY ENDPOS
 	BMI SPEC2
 	JSR INTOAS
 	JSR PCHROUT
+	; In underline mode, after we print the
+	; character, we backspace the printhead
+	; and print an underline character.
 	LDA UNDERLINE
 	BEQ NOBRK
 	LDA #8
@@ -984,12 +1363,18 @@ BUFLP CPY ENDPOS
 NOBRK INY
 	JMP BUFLP
 ENDBUFF RTS
+
+; Stage 2 format commands.
 SPEC2 STY YSAVE
 	AND #127
 	STA SAVCHAR
 	JSR INTOAS
 OTHER CMP #'c
 	BNE NOTCENTER
+	; c Centering looks at the length of the
+	; line, then sends out extra spaces (the
+	; left margin has already been printed) to
+	; move the printhead to the right place.
 	SEC
 	LDA PAGEWIDTH
 	SBC ENDPOS
@@ -1005,6 +1390,10 @@ CLOOP JSR PCHROUT
 	JMP NOBRK
 NOTCENTER CMP #'e
 	BNE NOTEDGE
+	; e Edge right. This subtracts the length
+	; of the line from the right margin
+	; position and moves the printhead to
+	; this position.
 EDGE SEC
 	LDA RMARGIN
 	SBC ENDPOS
@@ -1015,21 +1404,32 @@ EDGE SEC
 	JMP CLOOP
 NOTEDGE CMP #'u
 	BNE NOTOG
+	; u Toggle underline mode.
 	LDA UNDERLINE
 	EOR #1
 	STA UNDERLINE
 NOTOG CMP #'#
 	BNE DOCODES
+	; # Substitute the current page number
+	; for the # symbol.
 DOPGN STY YSAVE
 	LDX PAGENUM
 	LDA PAGENUM+1
 	JSR PROUTNUM
 	LDY YSAVE
 	JMP NOBRK
+
+; Do special format codes. This just uses
+; the screen-code value of the character
+; as an index into the CODEBUFFER, then
+; sends out the code. SpeedScript makes
+; no judgment on the code being sent out.
 DOCODES LDX SAVCHAR
 	LDA CODEBUFFER,X
 	JSR PCHROUT
 	JMP NOBRK
+
+; Display free memory using OUTNUM.
 FREEMEM JSR TOPCLR
 	SEC
 	LDA TEXEND

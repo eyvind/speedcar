@@ -1,3 +1,10 @@
+; This module supports most primitive
+; input/output functions, including a
+; routine to clear the screen and reset
+; the screen editor (OPENEDITOR), print a
+; character (CHROUT), and get a key from
+; the keyboard (GETAKEY).
+
 OPENEDITOR LDX #0
 	LDA #12
 	STA ICCOM
@@ -13,6 +20,12 @@ OPENEDITOR LDX #0
 	LDA #3
 	STA ICCOM,X
 	JMP CIO
+
+; Put the ATASCII value of the character
+; into the accumulator and call CHROUT
+; to print a character. The Y register is
+; preserved. We call CIO with a buffer
+; length of zero.
 CHROUT STY CHRYSAVE
 	LDX #0
 	STX ICBLEN
@@ -23,7 +36,22 @@ CHROUT STY CHRYSAVE
 	JSR CIO
 	LDY CHRYSAVE
 	RTS
+
+; The filename of the Editor device.
 ENAME .BYTE "E:"
+
+; OUTNUM and PROUTNUM print decimal
+; numbers to the display or printer. The
+; integer to be printed is passed with
+; the low byte in the X register and the
+; high byte in the accumulator. The
+; integer to floating-point routine
+; ($D9AA) is called first, followed by
+; floating-point to ATASCII routine,
+; which creates a string of ATASCII
+; digits. The last digit of the number
+; has bit 7 set, which we use to
+; terminate printing.
 PROUTNUM LDY #128
 	JMP OVERZAP
 OUTNUM LDY #0
@@ -46,6 +74,23 @@ OVERPCHR PLA
 	INY
 	BNE ONUMLOOP
 ONUMEXIT RTS
+
+; The system keyboard fetch routine
+; interferes with the display-list
+; interrupt, since the blip of each key
+; is timed with WSYNC, which freezes the
+; ANTIC chip for one line. This causes
+; annoying flicker. This routine uses
+; POKEY sound decaying from volume 15 to
+; 0 for the keyboard feedback tone. It's
+; not hard to create any sound effect you
+; want for the keyboard blip. This
+; routine mimics the system routine
+; fairly closely. It's easy to expand it
+; to allow many more keyboard functions
+; and full processing of new keystrokes
+; just by changing some of this code and
+; the keyboard table.
 GETIN LDA 764
 	CMP #$FF
 	BNE GETCHAR
@@ -57,9 +102,11 @@ GETCHAR LDA 764
 	STA KEYVAL
 	LDA #$FF
 	STA 764
+	; Clear break flag.
 	STA $11
 	JSR BLIP
 	LDA KEYVAL
+	; Check for SHIFT+CTRL.
 	CMP #$C0
 	BCS GXIT
 	AND #63
@@ -71,6 +118,10 @@ GETCHAR LDA 764
 	STA SHFLOK
 GXIT LDA #0
 	RTS
+
+; The CAPS/LOWR key toggles the SHiFtLOcK
+; flag to allow either only uppercase, or
+; both uppercase and lowercase.
 NOTSET LDA SHFLOK
 	EOR #64
 	STA SHFLOK
@@ -88,6 +139,9 @@ NOTCAPS LDX KEYVAL
 NOTLOCKED CMP #$80
 	BEQ GXIT
 	RTS
+
+; The sound effect for the keyboard
+; "blip."
 BLIP PHA
 	LDA #50
 	STA $D200
@@ -101,6 +155,7 @@ SLOW DEY
 	BNE SNDLOOP
 	PLA
 	RTS
+
 KEYBOARD .BYTE 108,106,59,128,128,107
 	.BYTE 43,42,111,128,112,117
 	.BYTE 155,105,45,61,118,128

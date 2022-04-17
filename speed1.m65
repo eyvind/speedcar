@@ -1,3 +1,28 @@
+; This module is chiefly concerned with
+; the word processor editing functions.
+; It contains many common subroutines,
+; such as TOPCLR and PRMSG to clear the
+; command line and print messages. It
+; contains the initialization routines
+; and takes care of memory moves (inserts
+; and deletes). A second module, SPEED.2,
+; is responsible for most input/output,
+; including the printer routines. SPEED.1
+; is the largest file in the linked
+; chain.
+
+; UMOVE is a high-speed memory move
+; routine. It gets its speed from
+; self-modifying code (the $FFFFs at
+; MOVLOOP are replaced by actual
+; addresses when UMOVE is called). UMOVE
+; is used to move an overlapping range of
+; memory upward (toward location 0), so
+; it is used to delete. Set FROML/FROMH
+; to point to the source area of memory,
+; DESTL/DESTH to point to the
+; destination, and LLEN/HLEN to hold the
+; length of the area being moved.
 UMOVE = MEMCOPY
 UMOVE_ LDA FROML
 	STA MOVLOOP+1
@@ -27,6 +52,14 @@ MOVLOOP_ LDA $FFFF,Y
 SKIPMOV LDA LLEN
 	BNE MOV2
 OUT RTS
+
+; DMOVE uses the same variables as UMOVE,
+; but it is used to move an overlapping
+; block of memory downward (toward
+; location $FFFF), so it is used to
+; insert. If the block of memory to be
+; moved does not overlap the destination
+; area, then either routine can be used.
 DMOVE = *-UMOVE_+MEMCOPY
 	LDA HLEN
 	TAX
@@ -62,9 +95,32 @@ SKIPDMOV DEC DMOVLOOP+2
 	BNE DMOV1
 	RTS
 MEMCPSZ = *-UMOVE_
+
+; REFRESH copies a screenful of text from
+; the area of memory pointed to by
+; TOPLIN. It works like a printer
+; routine, fitting a line of text between
+; the screen margins, wrapping words, and
+; restarts at the left margin after
+; printing a carriage return. SpeedScript
+; constantly calls this routine while the
+; cursor is blinking, so it has to be
+; very fast. To eliminate flicker, it
+; clears out the end of each line instead
+; of first clearing the screen. It stores
+; the length of the first screen line for
+; the sake of the CHECK routine (which
+; scrolls up by adding that length to
+; TOPLIN) and the last text location
+; referenced (so CHECK can see if the
+; cursor has moved off the visible
+; screen). REFRESH can automatically
+; handle different screen widths.
 REFRESH LDA #40
 	INY
 	CLC
+	; RLM: Left margin. Location $58/$59
+	; points to the address of screen memory.
 	ADC RLM
 	CLC
 	ADC $58
@@ -72,6 +128,9 @@ REFRESH LDA #40
 	LDA $59
 	ADC #0
 	STA SCR+1
+	; TOPLIN points to the first character
+	; within text to be printed at the
+	; top-left corner of the screen.
 	CLC
 	LDA TOPLIN
 	STA TEX
@@ -118,6 +177,10 @@ COPY LDA LBUFF,Y
 	STY LENTABLE
 CLRLN CPY LINELEN
 	BEQ CLEARED
+	; Character #64 (ATASCII value of 0)
+	; fills the gap when a line is broken. It
+	; can be redefined to show or not show
+	; these false spaces.
 	LDA #64
 	STA (SCR),Y
 	INY
@@ -137,6 +200,15 @@ PDONE LDA TEX
 	LDA TEX+1
 	STA BOTSCR+1
 	RTS
+
+; The following routine fills the entire
+; text area with space characters (screen
+; code 0), effectively erasing all text.
+; It is called when the program is first
+; run and when an Erase All is performed.
+; It also initializes the cursor position
+; (CURR) and the end-of-text pointer
+; (LASTLINE).
 ERASE LDA TEXSTART
 	STA TEX
 	STA TOPLIN
@@ -165,6 +237,19 @@ CLR2 STA (TEX),Y
 	BNE CLR2
 	STA (TEX),Y
 	RTS
+
+; PRMSG is used anytime we need to print
+; something at the top of the screen (the
+; command line). Pass it the address of
+; the message to be printed by storing
+; the low byte of the address in the
+; accumulator and the high byte in the Y
+; register. The message in memory must
+; end with a zero byte. The routine does
+; not add a carriage return. CHROUT
+; (character out) prints the character in
+; the accumulator to the screen. CHROUT
+; is a subroutine in the SUPPORT package.
 PRMSG STA TEMP
 	STY TEMP+1
 	LDA #1
@@ -186,6 +271,10 @@ JDOS LDA BLINK
 	STA (CURR),Y
 NOBLINK JSR INIT2
 	JMP MAIN
+
+; The initialization routine sets up the
+; memory map, clears out certain flags,
+; and enables the display-list interrupt.
 INIT LDA #125
 	JSR CHROUT
 	LDA #0
@@ -201,10 +290,19 @@ INIT LDA #125
 	STA RLM
 	LDA #40
 	STA LINELEN
+	; Label END is at the end of the source
+	; code, so it points to the last address
+	; used by the object code. We use it to
+	; calculate the start-of-text memory.
 	LDA # >END
 	CLC
 	ADC #1
 	STA TEXSTART+1
+	; Location 561 points to the display
+	; list, which holds screen information at
+	; the top of memory. We use it as the
+	; last address available for storing text
+	; or buffer text.
 	LDA 561
 	SEC
 	SBC #1
@@ -217,6 +315,13 @@ INIT LDA #125
 	STA TEXEND+1
 	LDA #$FF
 	STA FPOS+1
+	; If location $4B is 0, then SpeedScript
+	; is booted from disk. if we booted from
+	; cassette, we free up the DOS area
+	; ($0700-$1E00) for use as the text
+	; buffer, and free up the text memory
+	; used by disk-based SpeedScript as the
+	; text buffer.
 	LDA $4B
 	BEQ DISKBOOT
 	LDA BUFEND+1
@@ -226,6 +331,11 @@ INIT LDA #125
 	LDA #$1E
 	STA BUFEND+1
 DISKBOOT RTS
+
+; The second initialization routine turns
+; on the display-list interrupt (HIGH-
+; LIGHT), homes the cursor, and prints
+; the credit line.
 INIT2 JSR HIGHLIGHT
 	LDA TEXSTART
 	STA CURR
@@ -238,6 +348,17 @@ INIT2 JSR HIGHLIGHT
 	JSR PRMSG
 	INC MSGFLG
 	JMP CHECK
+
+; SYSMSG displays "SpeedScript 3.0." The
+; message flag (MSGFLG) is set when a
+; message is to be left on the screen
+; only until the next keystroke. After
+; that keystroke, SYSMSG is called. The
+; INIT2 routine prints the credit line
+; with the MSGFLG set so that you won't
+; have to stare at the author's name
+; while you're writing--a modesty
+; feature.
 SYSMSG JSR TOPCLR
 	LDA # <MSG1
 	LDY # >MSG1
@@ -245,6 +366,14 @@ SYSMSG JSR TOPCLR
 	LDA #0
 	STA MSGFLG
 	RTS
+
+; TOPCLR keeps the command line clean. It
+; is called before most messages. It's
+; like a one-line clear-screen. It also
+; forces the left margin (82) to 0, and
+; homes the cursor to the beginning of
+; the command line by zeroing out the X
+; and Y cursor positions (84 and 85).
 TOPCLR LDY #39
 	LDA #SPACE
 TOPLOOP STA ($58),Y
@@ -255,6 +384,8 @@ TOPLOOP STA ($58),Y
 	STA 85
 	STA 84
 	RTS
+
+; Convert ATASCII to screen codes
 ASTOIN PHA
 	AND #128
 	STA TEMP
@@ -271,6 +402,18 @@ NOTCTRL SEC
 	SBC #32
 LOWR ORA TEMP
 	RTS
+
+; The MAIN loop blinks the cursor, checks
+; for keystrokes, converts them from
+; ATASCII to screen codes, puts them in
+; text at the CURRent position, and
+; increments the CURRent position and
+; LASTLINE. It also checks for special
+; cases like the RETURN key and passes
+; control characters to the CONTROL
+; routine. The INSMODE flag is checked to
+; see if we should insert a space before
+; a character.
 MAIN LDY #0
 	STY BLINK
 	LDA (CURR),Y
@@ -286,6 +429,8 @@ MAIN2 LDY #0
 	JSR REFRESH
 WAIT JSR GETIN
 	BNE KEYPRESS
+	; We check for the START key, and if
+	; pressed, go to the HOME cursor routine.
 	LDA #8
 	STA 53279
 	LDA 53279
@@ -297,12 +442,21 @@ WAIT JSR GETIN
 	STA (CURR),Y
 	JSR HOME
 	JMP MAIN
+
+; The realtime clock (location 20), which
+; counts in 1/60 seconds, is checked for
+; 16/60 seconds (about 1/5 second) to see
+; if it's time to blink the cursor.
 FLIPIT LDA 20
 	AND #16
 	BEQ WAIT
 	LDA #0
 	STA 20
 	JMP MAIN2
+
+; A key has been pressed. We check the
+; SELECT key to see if the keystroke
+; should be inverted.
 KEYPRESS TAX
 	LDA #8
 	STA 53279
@@ -324,6 +478,8 @@ NOTBKS LDA MSGFLG
 NOMSG TXA
 	CMP #155
 	BNE NOTCR
+	; Change a carriage return into a back
+	; arrow.
 	LDX #30
 	JMP OVERCTRL
 NOTCR TXA
@@ -357,6 +513,7 @@ NOINST PLA
 	AND #127
 	ORA SELFLAG
 	LDY #0
+	; Put the character into memory.
 	STA (CURR),Y
 	JSR REFRESH
 	SEC
@@ -373,11 +530,28 @@ NOINST PLA
 	LDA CURR+1
 	ADC #0
 	STA LASTLINE+1
+	; Move the cursor forward.
 INKURR INC CURR
 	BNE NOINC2
 	INC CURR+1
 NOINC2 JSR CHECK
 	JMP MAIN
+
+; CONTROL looks up a keyboard command in
+; the list of control codes at CTBL. The
+; first byte of CTBL is the actual number
+; of commands. Once the position is
+; found, this position is doubled as an
+; index to the two-byte address table at
+; VECT. The address of MAIN-1 is put on
+; the stack, simulating the return
+; address; then the address of the
+; command routine taken from VECT is
+; pushed. We then perform an RTS. RTS
+; pulls the bytes off the stack as if
+; they were put there by a JSR. This
+; powerful technique is used to simulate
+; ON-GOTO in machine language.
 CONTROL LDX CTBL
 SRCH CMP CTBL,X
 	BEQ FOUND
@@ -412,14 +586,37 @@ VECT .WORD RIGHT-1,LEFT-1,WLEFT-1,WRIGHT-1,BORDER-1,LETTERS-1
 	.WORD ENDTEX-1,PRINT-1
 	.WORD DELIN-1,ALPHA-1,KILLBUFF-1,HUNT-1,FREEMEM-1,TAB-1
 	.WORD LOTTASPACE-1,REPSTART-1,SANDR-1,EATSPACE-1,ESC-1,ONOFF-1
+
+; Toggle ESCape mode.
 ESC LDA ESCFLAG
 	EOR #128
 	STA ESCFLAG
 	RTS
+
+; Change the character definition of the
+; character used to fill in the end of a
+; line. It alternates between being a
+; blank space, and being a blank space
+; with a tiny dot visible. This lets you
+; see which spaces are actually part of
+; your text and which are just used to
+; parse the screen.
 ONOFF LDA CHSET+$204
 	EOR #16
 	STA CHSET+$204
 	RTS
+
+; The CHECK routine first prevents the
+; cursor from disappearing past the
+; beginning or end-of-text memory and
+; prevents us from cursoring past the
+; end-of-text pointer. It also checks to
+; see if the cursor has left the visible
+; screen, scrolling with REFRESH to make
+; the cursor visible. The double-byte
+; SBCs are used as a 16-bit CMP macro,
+; setting the Z and C flags just like CMP
+; does.
 CHECK JSR CHECK2
 	SEC
 	LDA CURR
@@ -499,6 +696,10 @@ OUTRANGE LDA LASTLINE
 	LDA LASTLINE+1
 	STA CURR+1
 	RTS
+
+; Move cursor right. If the OPTION key is
+; held down, we instead increase the line
+; length.
 RIGHT
 	LDA #8
 	STA 53279
@@ -520,6 +721,10 @@ CRIGHT INC CURR
 	BNE NOINCR
 	INC CURR+1
 NOINCR JMP CHECK
+
+; Move cursor left. If the OPTION key is
+; held down, we instead decrease the line
+; length.
 LEFT LDA #8
 	STA 53279
 	LDA 53279
@@ -541,6 +746,8 @@ CLEFT LDA CURR
 	DEC CURR+1
 NODEC DEC CURR
 	JMP CHECK
+
+; Word left. We look backward for a space.
 WLEFT LDA CURR
 	STA TEX
 	LDA CURR+1
@@ -570,6 +777,9 @@ WROUT SEC
 	ADC #0
 	STA CURR+1
 	JMP CHECK
+
+; Word right. We scan forward for a
+; space. OIDS is not a meaningful label.
 WRIGHT LDY #0
 RLOOP LDA (CURR),Y
 	CMP #SPACE
@@ -591,6 +801,13 @@ OIDS LDA (CURR),Y
 	BEQ ROUT
 	CMP #RETCHAR
 	BEQ ROUT
+
+; Add the Y register to the CURRent
+; cursor position to move the cursor.
+; CHECK prevents illegal cursor movement.
+; LASTWORD is called if the end of the
+; word cannot be found before we reach
+; the end-of-text.
 ADYCURR CLC
 	TYA
 	ADC CURR
@@ -604,6 +821,16 @@ LASTWORD LDA LASTLINE
 	LDA LASTLINE+1
 	STA CURR+1
 	JMP CHECK
+
+; ENDTEX is tricky. If the end-of-text
+; pointer would point to an area already
+; visible on the screen, we just move the
+; cursor there and call REFRESH.
+; Otherwise, we step back 1K from the
+; end-of-text and then scroll to the end.
+; This is necessary since in the worst
+; case only 18 characters of return-marks
+; would fill the screen.
 ENDTEX LDA #0
 	STA TOPLIN
 	LDA LASTLINE+1
@@ -615,15 +842,29 @@ ENDTEX LDA #0
 SAFE STA TOPLIN+1
 	JSR REFRESH
 	JMP LASTWORD
+
+; Change the border color. The display
+; list interrupt automatically places
+; SCRCOL into the hardware background
+; color register #2.
 BORDER INC SCRCOL
 	INC SCRCOL
 	RTS
+
+; Change text luminance. TEXCOLR is
+; stored into hardware color register #1
+; during the display-list interrupt.
 LETTERS INC TEXCOLR
 	INC TEXCOLR
 	LDA TEXCOLR
 	AND #15
 	STA TEXCOLR
 	RTS
+
+; Sentence left. We look backward for
+; ending punctuation or a return-mark,
+; then go forward until we run out of
+; spaces.
 SLEFT LDA CURR
 	STA TEX
 	LDA CURR+1
@@ -674,6 +915,10 @@ FIRSTWORD LDA TEXSTART
 	LDA TEXSTART+1
 	STA CURR+1
 	JMP CHECK
+
+; Sentence right. We look forward for
+; ending punctuation, then skip forward
+; until we run out of spaces.
 SRIGHT LDY #0
 SRLP LDA (CURR),Y
 	CMP #'.-32
@@ -712,6 +957,14 @@ NOFIXCURR LDA (CURR),Y
 	CMP #RETCHAR
 	BEQ PUNCT2
 	JMP ADYCURR
+
+; The text buffer starts at a fixed
+; location, but the end of the buffer is
+; changed as text is added to it. To
+; clear the buffer, we just set the end
+; of the buffer to the value of the start
+; of the buffer. No text is actually
+; erased.
 KILLBUFF LDA TEXBUF
 	STA TPTR
 	LDA TEXBUF+1
@@ -723,6 +976,33 @@ KILLBUFF LDA TEXBUF
 	LDA #1
 	STA MSGFLG
 	RTS
+
+; This is the second level of the
+; general-purpose delete routines. UMOVE
+; is the primitive core of deleting. For
+; CTRL-D, the CURRent cursor position is
+; the source; then a cursor command is
+; called to update the cursor pointer.
+; This becomes the destination. For
+; CTRL-E, the CURRent cursor position is
+; the destination; a cursor movement
+; routine is called, and this becomes the
+; source. UMOVE is then called. We
+; actually move more than the length from
+; the source to the end-of-text. Some
+; extra text is moved from past the
+; end-of-text. Since everything past the
+; end-of-text is spaces, this neatly
+; erases everything past the new
+; end-of-text position. Naturally, the
+; end-of-text pointer is updated. Before
+; the actual delete is performed, the
+; text to be deleted is stored in the
+; buffer so that it can be recalled in
+; case of error. The buffer doubles as a
+; fail-safe device, and for moving and
+; copying text. Checks are made to make
+; sure that the buffer does not overflow.
 DEL1 SEC
 	LDA CURR
 	SBC TEXSTART
@@ -810,6 +1090,15 @@ GOSAV LDA TPTR
 	SBC GOBLEN+1
 	STA LASTLINE+1
 	RTS
+
+; Most delete commands end up calling the
+; above routines. The single-character
+; deletes must subtract 1 from the buffer
+; pointer so that single characters are
+; not added to the buffer. But note how
+; short these routines are.
+
+; Delete character (BACK S)
 DELCHAR JSR DEL1
 	JSR LEFT
 	JSR DEL2
@@ -821,11 +1110,27 @@ FIXTP SEC
 	SBC #0
 	STA TPTR+1
 	RTS
+
+; CTRL-BACK S
 DELIN JSR RIGHT
 	JSR DEL1
 	JSR LEFT
 	JSR DEL2
 	JMP FIXTP
+
+; Called by CTRL-D. As mentioned, it
+; stores CURR into FROML/FROMH, moves the
+; cursor either by sentence, word, or
+; paragraph, then stores the new position
+; of CURR into DESTL and DESTH. The above
+; routines perform the actual delete.
+; CTRL-D always discards the previous
+; contents of the buffer, for deleting
+; text backward creates a buffer of
+; out-of-order text. Notice how we change
+; the color of the command window to red
+; to warn the user of the impending
+; deletion.
 DELETE JSR KILLBUFF
 	LDA #RED
 	STA WINDCOLR
@@ -855,6 +1160,12 @@ NOTSENT CMP #'P
 	JSR PARLEFT
 	JMP DEL2
 NOTPAR RTS
+
+; Home the cursor. This is called by the
+; START key. We check to see if START is
+; held down for at least 1/2 second. If
+; it is, we move the cursor to the top of
+; text.
 HOME SEC
 	LDA CURR
 	SBC TOPLIN
@@ -879,6 +1190,10 @@ TOPHOME LDA TEXSTART
 	LDA TEXSTART+1
 	STA CURR+1
 	JMP WAITST
+
+; This deletes all spaces between the
+; cursor and following nonspace text.
+; Sometimes inventing labels can be fun.
 EATSPACE LDA CURR
 	STA TEX
 	STA DESTL
@@ -932,6 +1247,9 @@ OUTSPACE CLC
 	SBC GOBLEN+1
 	STA LASTLINE+1
 	RTS
+
+; Insert 255 spaces. Notice how it and
+; other insert routines use TAB2.
 LOTTASPACE LDA #255
 	STA INSLEN
 	JMP TAB2
@@ -954,6 +1272,8 @@ FILLSP STA (CURR),Y
 	DEX
 	BNE FILLSP
 	RTS
+
+; Insert a single space.
 INSCHAR LDA #1
 	STA INSLEN
 	LDA #0
@@ -963,6 +1283,9 @@ INSCHAR LDA #1
 	LDY #0
 	STA (CURR),Y
 	JMP CHECK
+
+; A general routine to insert as many
+; spaces as are specified by INSLEN.
 INSBLOCK CLC
 	LDA LASTLINE
 	ADC INSLEN
@@ -998,10 +1321,28 @@ OKINS CLC
 	ADC INSLEN+1
 	STA LASTLINE+1
 INOUT RTS
+
+; Toggle insert mode. The INSMODE nag
+; doubles as the color of the command
+; line.
 INSTGL LDA INSMODE
 	EOR #BLUE
 	STA INSMODE
 	RTS
+
+; Another example of modular code. This
+; is called anytime a yes/no response is
+; called for. It prints "Are you sure?
+; (Y/N)," then returns with the zero flag
+; set to true if Y was pressed, ready for
+; the calling routine to use BEQ or BNE
+; as a branch for yes or no. We trap out
+; the clear-screen key in case this
+; routine is called by Erase All, since
+; otherwise repeating keys may instantly
+; cancel the command. The AND #223 zaps
+; out the distinction between uppercase
+; and lowercase Y.
 YORN LDA # <YMSG
 	LDY # >YMSG
 	JSR PRMSG
@@ -1013,6 +1354,15 @@ YORNKEY JSR GETIN
 	AND #223
 	CMP #'Y
 	RTS
+
+; Erase all text. Allowed only if the
+; OPTION key is held down with
+; SHIFT-CLEAR. It calls YORN to affirm
+; the deadly deed, then calls ERASE to
+; erase all text, INIT2 to reset some
+; flags, then jumps back to the MAIN
+; loop. LDX #$FA / TXS is used to clean
+; up the stack.
 CLEAR LDA #8
 	STA 53279
 	LDA 53279
@@ -1033,6 +1383,8 @@ DOIT LDX #$FA
 	JSR ERASE
 	JSR INIT2
 	JMP MAIN
+
+; Paragraph right.
 PARIGHT LDY #0
 PARLP LDA (CURR),Y
 	CMP #RETCHAR
@@ -1049,6 +1401,11 @@ RETFOUND INY
 	BNE GOADY
 	INC CURR+1
 GOADY JMP ADYCURR
+
+; Paragraph left. Notice the trick of
+; decrementing the high byte of the
+; pointer, then starting the index at 255
+; in order to search backward.
 PARLEFT LDA CURR
 	STA TEX
 	LDA CURR+1
@@ -1095,6 +1452,30 @@ TEXTOCURR LDA TEX
 	LDA TEX+1
 	STA CURR+1
 	JMP CHECK
+
+; This enables the display-list interrupt
+; (DLI). The DLI allows separate
+; background colors for the command line
+; and the rest of the screen. It lets us
+; change the color of the top line to
+; flag insert mode or to warn the user
+; with a red color that he/she should be
+; careful. Since it is an interrupt, it
+; is always running in the background.
+; Interrupt routines must always be
+; careful not to corrupt the main
+; program.
+
+; HIGHLIGHT turns off any DLIs (by
+; storing #64 into $D40E), sets the NMI
+; pointer ($200/$201), creates a custom
+; display list of IRG mode 3 (lowercase
+; descenders, GRAPHICS 0 1/2) with DLI
+; set in one line, then enables DLIs ($C0
+; into $D40E) and returns. The routine
+; DLI is now running constantly in the
+; background, changing the screen color
+; of all text below the DLI.
 HIGHLIGHT LDA #64
 	STA $D40E
 	LDA # <DLI
@@ -1126,9 +1507,23 @@ DLOOP LDA DLIST,Y
 	LDA #$C0
 	STA $D40E
 	RTS
+
+; The custom display list.
 DLIST .BYTE 112,112,112,3+64+128,0,0
 	.BYTE 3,3,3,3,3,3,3,3,3,3,3,3,3
 	.BYTE 3,3,3,3,3,16,65,0,0
+
+; The display-list interrupt routine
+; stores the SCReen COLor and TEXt COLoR
+; into the appropriate hardware
+; registers, then stores the WINDow COLoR
+; into 710, and #10 into 709 to set the
+; color of the top line of the screen.
+; This line is automatically set by the
+; normal vertical- blank interrupt. We
+; also force the character-set pointer to
+; keep our character set in place
+; whenever we're on the editing screen.
 DLI PHA
 	LDA SCRCOL
 	STA $D40A
@@ -1146,6 +1541,20 @@ DLI PHA
 	STA $02B6
 	PLA
 	RTI
+
+; ERAS is called by CTRL-E. It works much
+; like CTRL-D. Notice that the ORA #64
+; allows users to press either S, W, P,
+; or CTRL-S, CTRL-W, CTRL-P, in case they
+; have a habit of leaving the control key
+; held down. It must call REFRESH after
+; each move and adjust the new position
+; of the cursor. If OPTION is held down
+; with CTRL-E, we don't erase the
+; previous contents of the buffer,
+; letting the user chain non-contiguous
+; sections into the buffer for later
+; recall.
 ERAS LDA #8
 	STA 53279
 	LDA 53279
@@ -1210,6 +1619,27 @@ ERA2 SEC
 	STA CURR+1
 	JSR REFRESH
 	JMP ERASAGAIN
+
+; The INPUT routine is used to get
+; responses from the command line. It
+; returns the complete line in INBUFF.
+; INLEN is the length of the input. A
+; zero byte is stored at INBUFF+INLEN
+; after the user presses RETURN. This
+; routine is foolproof (I know...), since
+; no control keys other than BACK S are
+; allowed, unless preceded by ESCape. The
+; SELECT key can be held down to enter
+; inverse-video characters. The system
+; cursor is turned on for this routine
+; (by putting #0 into 752), then turned
+; off when we exit (by putting #1 into
+; 752). This routine also prevents the
+; user from typing past the end of the
+; command line. If the limit of typing
+; length must be set arbitrarily, LIMIT
+; is preset and INPUT is called at INP1.
+; CURSIN is the MAIN loop.
 INPUT LDA #39
 	SBC 85
 	STA LIMIT

@@ -1,3 +1,26 @@
+; DOSPAK is a self-contained substitute
+; for the DOS menu, although it uses
+; several routines built into
+; SpeedScript. The concept of DOSPAK is
+; that all directory entries should fit
+; on one screen. A large cursor is used
+; to move from filename to filename. At
+; any time, you can delete, rename, lock,
+; unlock, or load the selected filename,
+; just by pressing one key, or a CTRL key
+; combination. Except for Rename, you
+; don't have to type the filename. You
+; can also format the entire disk or
+; redisplay the directory.
+
+; CATALOG fits the entire disk directory
+; onto the screen by skipping over the
+; sector counts, trimming up spacing, and
+; placing three items per line. The
+; cursor position of each filename is
+; saved into a slot in memory so that the
+; cursor routine can quickly and easily
+; skip about.
 CATALOG JSR CLOSE7
 	LDX #$70
 	LDA # <DIRNAME
@@ -74,6 +97,12 @@ GET7 LDX #$70
 	LDA #7
 	STA ICCOM,X
 	JMP CIO
+
+; The main DOS routine calls the CATALOG
+; routine to fill the screen with
+; filenames, then puts the cursor on the
+; current filename, waiting for a
+; keypress.
 DOS JSR DELITE
 	JSR OPENEDITOR
 	JSR DELITE
@@ -96,6 +125,13 @@ NAMELP JSR INVNAME
 	JSR GETAKEY
 	LDX #1
 	STX 752
+	; Now that we've got a keypress, we look
+	; it up in the keypress table, then
+	; vector to the appropriate routine. This
+	; is the same ML ON-GOTO routine that
+	; we've used in several places in
+	; SpeedScript, including the CONTROL
+	; routine.
 	LDX DOSTABLE
 	CMP #97
 	BCC NOPROB
@@ -115,29 +151,42 @@ FOUNDIT DEX
 	LDA DOSADR,X
 	PHA
 	RTS
+
 DOSTABLE .BYTE 15
 	.BYTE "RLUF1234"
+
 DOSADR .WORD DLEFT-1,DRIGHT-1,DUP-1,DDOWN-1,DELFILE-1,RENAME-1
 	.WORD LOCK-1,UNLOCK-1,FORMAT-1,DRIVE-1,DRIVE-1,DRIVE-1
 	.WORD DRIVE-1,ESCDOS-1,LOADIT-1
+
+; Move bar cursor left by decrementing
+; slot pointer.
 DLEFT JSR INVNAME
 	LDX XSLOT
 	BEQ NRANGE
 	DEX
 	DEX
 	JMP RESLOT
+
+; Move bar cursor right by incrementing
+; slot pointer.
 DRIGHT JSR INVNAME
 	LDX XSLOT
 	INX
 	INX
 	CPX XPTR
 	BCS NRANGE
+	; Store new slot index.
 RESLOT STX XSLOT
 	LDA SLOT,X
 	STA SCR
 	LDA SLOT+1,X
 	STA SCR+1
 NRANGE JMP NAMELP
+
+; Move bar cursor up by subtracting 6
+; from the slot pointer (each slot is two
+; bytes).
 DUP JSR INVNAME
 	LDA XSLOT
 	CMP #6
@@ -146,6 +195,9 @@ DUP JSR INVNAME
 	SBC #6
 	TAX
 	JMP RESLOT
+
+; Move bar cursor down by adding 6 to
+; the slot pointer.
 DDOWN JSR INVNAME
 	LDA XSLOT
 	CLC
@@ -154,6 +206,11 @@ DDOWN JSR INVNAME
 	BCS NRANGE
 	TAX
 	JMP RESLOT
+
+; This routine turns a filename pointed
+; to by the bar cursor into a legal CIO
+; filename, complete with Dx: and legal
+; extension.
 NAMER LDX #0
 COPYD LDA DIRNAME,X
 	STA FNBUFF,X
@@ -179,6 +236,9 @@ NOTDOT STX FNLEN
 	LDA #0
 	STA FNBUFF,X
 	RTS
+
+; This routine passes any CIO command
+; along with a formed filename.
 XIO LDX #$70
 	STA ICCOM,X
 	LDA FNLEN
@@ -190,19 +250,37 @@ XIO LDX #$70
 	LDA # >FNBUFF
 	STA ICBADR+1,X
 	JMP CIO
+
+; The DOS functions are quite short.
+; NAMER builds the name; then we simply
+; pass the number of the DOS CIO function
+; unto XIO. If there's no error, we
+; return to waiting for the next
+; keystroke; otherwise, print the DOS
+; error message and wait for a keystroke.
 DELFILE JSR NAMER
 	LDA #33
+
+; Jump to the XIO routine.
 GOXIO JSR XIO
 	BPL JNAME
 	JMP DOSERR
 JNAME JSR INVNAME
 	JMP NAMELP
+
+; Lock a file.
 LOCK JSR NAMER
 	LDA #35
 	JMP GOXIO
+
+; Unlock a file.
 UNLOCK JSR NAMER
 	LDA #36
 	JMP GOXIO
+
+; We ask for the new name of the file,
+; build the rename string, then jump to
+; the XIO routine.
 RENAME JSR BOTCLR
 	LDA # <RENMSG
 	LDY # >RENMSG
@@ -234,6 +312,11 @@ COPYR LDA INBUFF,X
 	JMP GOXIO
 NONAME JSR DOSMSG
 	JMP JNAME
+
+; Format routine. We use YORN to affirm
+; this operation, which erases an entire
+; disk. BOTCLR clears the bottom line of
+; the screen.
 FORMAT JSR BOTCLR
 	LDA # <FORMSG
 	LDY # >FORMSG
@@ -244,9 +327,16 @@ FORMAT JSR BOTCLR
 	JSR NAMER
 	LDA #254
 	JMP GOXIO
+
+; Select new drive number and redisplay
+; directory.
 DRIVE LDA TEMP
 	STA DIRNAME+1
 	JMP DOS
+
+; The Load-from-directory routine opens
+; the file, then jumps into the SpeedScript
+; Load routine.
 LOADIT LDX #$70
 	STX IOCB
 	LDA #4
@@ -255,12 +345,21 @@ LOADIT LDX #$70
 	STA INDIR
 	STA INDIR+1
 	JSR NAMER
+	; Command 3 is for OPEN file.
 	LDA #3
 	JSR XIO
 	BMI DOSERR
 	JSR ERASE
 	JSR LOADLINK
+	; If the load ended with an error, we
+	; display the error; otherwise, we exit
+	; the DOSPAK at ESCDOS.
 	BMI DOSERR
+	; The ESCape DOS routine clears the
+	; stack, clears the screen, reenables the
+	; display-list interrupt, prints the
+	; "SpeedScript" message, then jumps back
+	; to the editing loop.
 ESCDOS LDX #$FA
 	TXS
 	LDA #125
@@ -268,11 +367,27 @@ ESCDOS LDX #$FA
 	JSR HIGHLIGHT
 	JSR SYSMSG
 	JMP MAIN
+
+; BOTCLR erases the bottom two lines of
+; the screen by positioning the cursor on
+; the next-to-the-last line, then
+; printing two INSERT LINE characters
+; that push any text on these lines off
+; the bottom of the screen. Nifty, eh?
 BOTCLR LDA #22
 	STA 84
 	LDA #157
 	JSR CHROUT
 	JMP CHROUT
+
+; This is the error routine for the
+; DOSPAK. We print "ERROR #", then print
+; the error number with OUTNUM, a bell
+; character (actually sounds like an
+; annoying buzzer, appropriate Pavlovian
+; treatment), then "Press RETURN." We
+; wait for a keystroke, then return to
+; getting keys for the DOSPAK commands.
 DOSERR STY YSAVE
 	JSR CLOSE7
 	JSR BOTCLR
@@ -290,6 +405,10 @@ DOSERR STY YSAVE
 	JSR GETAKEY
 	JSR DOSMSG
 	JMP JNAME
+
+; Inverse the filename field of the
+; currently selected filename. Used to
+; create the bar cursor.
 INVNAME LDY #12
 INVLP LDA (SCR),Y
 	EOR #128
@@ -297,6 +416,10 @@ INVLP LDA (SCR),Y
 	DEY
 	BPL INVLP
 	RTS
+
+; DOSMSG erases the bottom line of the
+; screen and prints the DOSPAK command
+; line, an abbreviated menu.
 DOSMSG JSR BOTCLR
 	LDA # <DIRINS
 	LDY # >DIRINS

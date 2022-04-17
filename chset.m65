@@ -1,10 +1,22 @@
-;*****************************
-;*                           *
-;* SPEEDSCRIPT CARACTER SET  *
-;*                           *
-;*  (ZIE SPEEDSCRIPT BOEK)   *
-;*                           *
-;*****************************
+; The character set here is stored as eight bytes
+; per line, so each line defines one character.
+; Sheldon Leemon's INSTEDIT character editor was
+; used to create the character set, and I wrote a
+; special program to convert the character set into
+; .BYTE statements. In ANTIC mode 3, each character
+; takes up ten scan lines of vertical screen space.
+; The characters in the lowercase portion of the
+; character set are displayed with a blank line at
+; the top line, then the character data from bytes
+; 1-7 of the character set. Byte 0 of the
+; character's definition is displayed at the ninth
+; line of the character. The tenth line is always
+; blank. This lets you define characters with true
+; descenders. The forced blank line lets you use
+; more of the character matrix for defining a
+; character, so these characters are larger than
+; normal Atari characters.
+
 	.BYTE 0,0,0,0,0,0,0,0
 	.BYTE 0,24,24,24,24,24,0,24
 	.BYTE 0,102,102,102,0,0,0,0

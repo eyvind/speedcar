@@ -5,24 +5,48 @@
 ;*       D:SPEED.0 *
 ;*                 *
 ;*******************
+
 	*=  $A000
+
+; Locations used by high-speed memory move
+; routines.
 FROML = $80
 FROMH = $81
 DESTL = $82
 DESTH = $83
 LLEN =  $84
 HLEN =  $85
+
+; CURR: Position of cursor within text memory. SCR:
+; used by the REFRESH routine.
 CURR =  $86
 SCR =   $88
+
+; TEX: An alternate location used in tandem with
+; CURR. COLR is used by REFRESH. TEMP is used
+; throughout as a scratchpad pointer. INDIR is also
+; a reusable indirect pointer. UNDERCURS stores the
+; value of the character highlighted by the cursor.
 TEX =   $8A
 TEMP =  $8C
 INDIR = $8E
 UNDERCURS = $90
+
+; WINDCOLOR: Color of command line window supported
+; by HIGHLIGHT. RETCHAR is the screen-code value of
+; the return-mark (a left-pointing arrow). SPACE is
+; the screen-code value of the space character, RED
+; and BLUE are used as command-line colors
 WINDCOLR = $91
 RETCHAR = 94
 SPACE = 0
 RED =   $32
 BLUE =  $74
+
+; Input/Output Control System definitions for
+; input/output control blocks (IOCBs). CIO is the
+; entry point for all file-oriented input/output.
+; SHFLOK is the SHiFtLOcK flag.
 ICCOM = $0342
 ICBADR = $0344
 ICBLEN = $0348
@@ -31,9 +55,22 @@ ICAUX2 = $034B
 ICSTAT = $0343
 SHFLOK = $02BE
 CIO =   $E456
+
+; Location $1F00 is safely above DOS 2.0S, DOS 3,
+; and OS/A+ DOS. Some DOS's may use more memory, so
+; you may need to reassemble SpeedScript at a
+; higher address, usually the address of LOMEM plus
+; 256 bytes to be safe.
 MEMCOPY = $1F00
 CHSET =  $2000
 VARS =   $2400
+
+; Called only when run from DOS. It is assumed that
+; the author's initials (that conveniently work out
+; in hex) are not normally present in memory. If
+; they are, we know that SpeedScript has been run
+; before, so we avoid the ERASE routine to preserve
+; the text in memory.
 BEGIN LDA 710
 	STA 709
 	JSR INIT
