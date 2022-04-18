@@ -316,8 +316,8 @@ INIT LDA #125
 	LDA #$FF
 	STA FPOS+1
 	; If location $09 is 1, then SpeedScript
-	; is booted from disk. if we booted from
-	; cassette, we free up the DOS area
+	; is booted from disk. If we didn't boot
+	; from disk, we free up the DOS area
 	; ($0700-$1E00) for use as the text
 	; buffer, and free up the text memory
 	; used by disk-based SpeedScript as the
