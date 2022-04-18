@@ -71,13 +71,14 @@ MEMCOPY = CHSET+$400   ; Self-modifying code and variables
 ; they are, we know that SpeedScript has been run
 ; before, so we avoid the ERASE routine to preserve
 ; the text in memory.
-BEGIN LDA 710
-	STA 709
-	JSR INIT
-	LDA #$CB
+BEGIN LDA #$CB
 	CMP FIRSTRUN
 	STA FIRSTRUN
-	BEQ SKIPERAS
+	BNE DOINIT
+	JMP JDOS
+DOINIT LDA 710
+	STA 709
+	JSR INIT
 	JSR ERASE
 	JSR KILLBUFF
 	LDA #8
@@ -85,7 +86,7 @@ BEGIN LDA 710
 	LDA #2
 	STA TEXCOLR
 	JSR RAMCOPY
-SKIPERAS JSR INIT2
+	JSR INIT2
 	JMP MAIN
 CHSET_ .INCLUDE chset.m65
 	.INCLUDE speed1.m65
