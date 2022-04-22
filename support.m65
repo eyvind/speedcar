@@ -118,10 +118,9 @@ GETCHAR LDA 764
 	STA SHFLOK
 GXIT LDA #0
 	RTS
-
-; The CAPS/LOWR key toggles the SHiFtLOcK
-; flag to allow either only uppercase, or
-; both uppercase and lowercase.
+	; The CAPS/LOWR key toggles the SHiFtLOcK
+	; flag to allow either only uppercase, or
+	; both uppercase and lowercase.
 NOTSET LDA SHFLOK
 	EOR #64
 	STA SHFLOK
