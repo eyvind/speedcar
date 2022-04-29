@@ -52,12 +52,14 @@ DIRINS .BYTE " √‘“Ã≠ƒelete Ãock ’nlock “ename ≈”√∆ormat √‘“Ã≠Ãoad  Drive
 RENMSG .BYTE "Rename to:",0
 FORMSG .BYTE "Format disk",0
 
+.IF .DEF CARTRIDGE
 ; Cartridge header
 	*= $BFFA
 	.WORD BEGIN
 	.BYTE 0
 	.BYTE 5
 	.WORD PREXIT
+.ENDIF
 
 ; The .OPT NO OBJ and .OPT OBJ pseudo-ops
 ; turn on and off object code generation.
@@ -66,10 +68,15 @@ FORMSG .BYTE "Format disk",0
 
 	.OPT NO OBJ
 
+.IF .DEF CARTRIDGE
 	*= MEMCOPY+MEMCPSZ
 
-CHRYSAVE   *= *+1
 DIRNAME    *= *+DIRSIZE
+.ELSE
+DIRNAME     = DIRNAME_
+.ENDIF
+
+CHRYSAVE   *= *+1
 SCRCOL     *= *+1
 TEXCOLR    *= *+1
 TEXSTART   *= *+2	; Start-of-text area
@@ -146,3 +153,10 @@ LINELEN    *= *+1	; Length of screen lines
 RLM        *= *+1	; REFRESH Left margin value
 KEYVAL     *= *+1	; Which key is pressed
 END         = *		; High byte of this +$100 is TEXSTART
+
+.IF .NOT .DEF CARTRIDGE
+; RUN vector
+	.OPT OBJ
+	*=  $02E0
+	.WORD BEGIN
+.ENDIF

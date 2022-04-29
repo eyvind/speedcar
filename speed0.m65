@@ -6,8 +6,6 @@
 ;*                 *
 ;*******************
 
-	*=  $A000
-
 ; Locations used by high-speed memory move
 ; routines.
 FROML = $80
@@ -61,9 +59,18 @@ CIO    = $E456
 ; you may need to reassemble SpeedScript at a
 ; higher address, usually the address of LOMEM plus
 ; 256 bytes to be safe.
-PRBUFF  = $1F00		; Printer line buffer
-CHSET   = $2000		; Character set (must be aligned to 512 bytes)
-MEMCOPY = CHSET+$400	; Self-modifying code and variables
+MEMSTART = $1F00
+PRBUFF   = MEMSTART		; Printer line buffer
+CHSET    = MEMSTART+$100	; Character set (must be aligned to 512 bytes)
+MEMCOPY  = CHSET+$400		; Self-modifying code and variables
+
+.IF .DEF CARTRIDGE
+	*= $A000
+.ELSE
+	*= CHSET
+.ENDIF
+
+CHSET_ .INCLUDE chset.m65
 
 ; Called only when run from DOS. It is assumed that
 ; the author's initials (that conveniently work out
@@ -71,24 +78,47 @@ MEMCOPY = CHSET+$400	; Self-modifying code and variables
 ; they are, we know that SpeedScript has been run
 ; before, so we avoid the ERASE routine to preserve
 ; the text in memory.
-BEGIN LDA #$CB
+BEGIN LDA 710
+	STA 709
+.IF .NOT .DEF CARTRIDGE
+	JSR INIT
+.ENDIF
+	LDA #$CB
 	CMP FIRSTRUN
 	STA FIRSTRUN
+.IF .DEF CARTRIDGE
 	BNE DOINIT
 	JMP JDOS
-DOINIT LDA 710
-	STA 709
-	JSR INIT
+DOINIT JSR INIT
+.ELSE
+	BEQ SKIPERAS
+.ENDIF
 	JSR ERASE
 	JSR KILLBUFF
 	LDA #8
 	STA SCRCOL
 	LDA #2
 	STA TEXCOLR
+.IF .NOT .DEF CARTRIDGE
+	; TODO: handle cassette boot
+	LDA $0C
+	STA JDOS+1
+	LDA $0D
+	STA JDOS+2
+	LDA # <JDOS
+	STA $0C
+	LDA # >JDOS
+	STA $0D
+	LDA #0
+	STA 580
+	LDA #1
+	STA $09
+.ELSE
 	JSR RAMCOPY
-	JSR INIT2
+.ENDIF
+SKIPERAS JSR INIT2
 	JMP MAIN
-CHSET_ .INCLUDE chset.m65
+
 	.INCLUDE speed1.m65
 	.INCLUDE support.m65
 	.INCLUDE dospak.m65
