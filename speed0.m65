@@ -60,9 +60,21 @@ CIO    = $E456
 ; higher address, usually the address of LOMEM plus
 ; 256 bytes to be safe.
 MEMSTART = $1F00
+
+; If NOCOPYCHSET is set when building a cartridge
+; image, the character set is not copied to RAM.
+; This gives 1024 bytes more text storage but
+; means that the "show invisible spaces" function
+; (CTRL-O) does not work.
+.IF .DEF CARTRIDGE .AND .DEF NOCOPYCHSET
+CHSET    = $A000
+MEMCOPY  = MEMSTART
+.ELSE
 PRBUFF   = MEMSTART		; Printer line buffer
+PRBUFSET = 1
 CHSET    = MEMSTART+$100	; Character set (must be aligned to 512 bytes)
 MEMCOPY  = CHSET+$400		; Self-modifying code and variables
+.ENDIF
 
 .IF .DEF CARTRIDGE
 	*= $A000

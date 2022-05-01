@@ -131,6 +131,9 @@ HUNTBUFF   *= *+30	; Holds hunt phrase
 REPLEN     *= *+1	; Length of replace phrase
 REPBUFF    *= *+30	; Holds replace phrase
 CODEBUFFER *= *+128	; Holds definable printkeys
+.IF .NOT .DEF PRBUFSET
+PRBUFF     *= *+256	; Printer line buffer
+.ENDIF
 HDBUFF     *= *+256	; Holds header
 FIRSTRUN   *= *+1	; Has program been run before?
 FTBUFF     *= *+256	; Holds footer
