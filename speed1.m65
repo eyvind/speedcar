@@ -328,6 +328,8 @@ INIT LDA #125
 	; buffer, and free up the text memory
 	; used by disk-based SpeedScript as the
 	; text buffer.
+.IF MEMSTART >= $1F00
+	; Only safe if MEMSTART is high enough
 	LDA $09
 	CMP #1
 	BEQ DISKBOOT
@@ -337,6 +339,7 @@ INIT LDA #125
 	STA TEXBUF+1
 	LDA #$1E
 	STA BUFEND+1
+.ENDIF
 DISKBOOT RTS
 
 ; The second initialization routine turns

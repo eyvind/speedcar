@@ -54,12 +54,19 @@ ICSTAT = $0343
 SHFLOK = $02BE
 CIO    = $E456
 
+; Allow MEMSTART to be defined on the command line
+.IF .NOT .DEF MEMSTART
 ; Location $1F00 is safely above DOS 2.0S, DOS 3,
 ; and OS/A+ DOS. Some DOS's may use more memory, so
 ; you may need to reassemble SpeedScript at a
 ; higher address, usually the address of LOMEM plus
 ; 256 bytes to be safe.
 MEMSTART = $1F00
+.ENDIF
+
+.IF <MEMSTART <> 0
+.ERROR "MEMSTART must be page aligned ($xx00)"
+.ENDIF
 
 ; If NOCOPYCHSET is set when building a cartridge
 ; image, the character set is not copied to RAM.
@@ -67,13 +74,33 @@ MEMSTART = $1F00
 ; means that the "show invisible spaces" function
 ; (CTRL-O) does not work.
 .IF .DEF CARTRIDGE .AND .DEF NOCOPYCHSET
-CHSET    = $A000
-MEMCOPY  = MEMSTART
+CHSET    = $A000	; Character set
+MEMCOPY  = MEMSTART	; Self-modifying code and variables
 .ELSE
-PRBUFF   = MEMSTART		; Printer line buffer
-PRBUFSET = 1
-CHSET    = MEMSTART+$100	; Character set (must be aligned to 512 bytes)
-MEMCOPY  = CHSET+$400		; Self-modifying code and variables
+
+; CHSET must be aligned to 1024 bytes, but MEMSTART
+; is only aligned to 256.  PRBUFF is 256 bytes in
+; size and can fill the gap to 512 byte alignment
+; if necessary.
+CHSET   .= MEMSTART
+.IF >CHSET & 1 <> 0
+PRBUFF   = CHSET
+PRBUFSET = 1		; Declare that PRBUFF is set
+CHSET   .= CHSET+$100
+.ENDIF
+
+; CHSET is now 512-byte aligned, but might not be
+; aligned to 1024 bytes.  HDBUFF and FTBUFF are 256
+; bytes each, so they can be used to move CHSET by
+; another 512 bytes.
+.IF >CHSET & 2 <> 0
+HDBUFF   = CHSET
+FTBUFF   = CHSET+$100
+HFBUFSET = 1		; HDBUFF and FTBUFF are set
+CHSET   .= CHSET+$200
+.ENDIF
+
+MEMCOPY  = CHSET+$400
 .ENDIF
 
 .IF .DEF CARTRIDGE

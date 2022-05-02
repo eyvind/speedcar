@@ -134,9 +134,11 @@ CODEBUFFER *= *+128	; Holds definable printkeys
 .IF .NOT .DEF PRBUFSET
 PRBUFF     *= *+256	; Printer line buffer
 .ENDIF
+.IF .NOT .DEF HFBUFSET
 HDBUFF     *= *+256	; Holds header
-FIRSTRUN   *= *+1	; Has program been run before?
 FTBUFF     *= *+256	; Holds footer
+.ENDIF
+FIRSTRUN   *= *+1	; Has program been run before?
 SAVCOL     *= *+1	; Save SCRCOL
 LINEFEED   *= *+1	; Linefeed mode flag
 ESCFLAG    *= *+1	; Was ESC pressed?
